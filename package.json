@@ -2,7 +2,11 @@
   "name": "mayoiga",
   "version": "0.0.1",
   "description": "Form library for React",
-  "main": "dist/index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
