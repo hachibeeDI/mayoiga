@@ -15,23 +15,24 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
     this.initialState = initialState;
   }
 
-  clear() {
+  clear = () => {
     this.provider.setState({pristine: true, store: this.initialState});
   }
 
-  updateState(name: string, updater: (formerValue: any) => any): Promise<undefined> {
+  updateState = (name: string, updater: (formerValue: any) => any): Promise<undefined> => {
     return new Promise(done => {
       this.provider.setState(
         {
           pristine: false,
-          store: immutable.update(this.provider.state.store, name, updater).value(),
+          // TODO: I guess an definition of the .d.ts is wrong
+          store: immutable.update(this.provider.state.store, name, updater) as any,
         },
         done
       );
     });
   }
 
-  setState(name: string, value: any): Promise<undefined> {
+  setState = (name: string, value: any): Promise<undefined> => {
     return new Promise(done => {
       this.provider.setState(
         {
@@ -43,7 +44,7 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
     });
   }
 
-  change(e: React.FormEvent): Promise<undefined> {
+  change = (e: React.FormEvent): Promise<undefined> => {
     const {name, value, type, target} = extractEventValue(e)!;
     if (type === 'check-list') {
       const previousState: Array<any> = objectPath.get(this.provider.state.store, name);
@@ -59,7 +60,7 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
     return this.setState(name, value);
   }
 
-  validate(name: string, validators: ReadonlyArray<(v: any, store: StateType) =>  undefined | null | string>) {
+  validate = (name: string, validators: ReadonlyArray<(v: any, store: StateType) =>  undefined | null | string>) => {
     const {store} = this.provider.state;
     const targetValue = objectPath.get(store, name);
     this.provider.setState({
@@ -70,15 +71,15 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
     });
   }
 
-  getState(): StateType {
+  getState = (): StateType => {
     return this.provider.state.store;
   }
 
-  isPristine() {
+  isPristine = () => {
     return this.provider.state.pristine
   }
 
-  isValid() {
+  isValid = () => {
     return Object.values(this.provider.state.errors)
       // FIXME: TypeScript may failed to parse type declaration?
       //  or `errors: {[P in keyof StateType]: Array<string>};` is not valid?
