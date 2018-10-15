@@ -31,8 +31,8 @@ export interface ProviderValues<StateType> {
 }
 
 export interface FormProps<StateType> {
-  onSubmit(state: StateType): void | Promise<undefined>;
-  onChanged(formActions: FormActions<any, any>): void;
+  onSubmit(state: StateType, formActions: FormActions<StateType, any>): void | Promise<undefined>;
+  onChanged(formActions: FormActions<StateType, any>): void;
   children: React.ReactNode;
 }
 

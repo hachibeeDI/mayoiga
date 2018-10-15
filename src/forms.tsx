@@ -105,12 +105,7 @@ export function Form<StateType = any>({onSubmit, onChanged, children, ...restPro
             onSubmit={e => {
               e.preventDefault();
               const state = formActions.getState();
-              const result = onSubmit(state);
-              if (result === undefined) {
-                formActions.clear();
-              } else {
-                result.then(formActions.clear);
-              }
+              onSubmit(state, formActions);
             }}
             {...restProps}
           >
