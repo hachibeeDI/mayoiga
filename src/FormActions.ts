@@ -6,9 +6,8 @@ import {ProviderComponent, ProviderProps, ProviderState} from './types';
 import {extractEventValue} from './utils/eventHandling';
 
 export default class FormActions<StateType = {}, OwnProps = {}> {
-  private provider: PureComponent<ProviderProps<StateType> & OwnProps, ProviderState<StateType>> ;
-  private initialState:  StateType;
-
+  private provider: PureComponent<ProviderProps<StateType> & OwnProps, ProviderState<StateType>>;
+  private initialState: StateType;
 
   constructor(provider: ProviderComponent<StateType, OwnProps>, initialState: StateType) {
     this.provider = provider;
@@ -17,7 +16,7 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
 
   clear = () => {
     this.provider.setState({pristine: true, store: this.initialState});
-  }
+  };
 
   updateState = (name: string, updater: (formerValue: any) => any): Promise<undefined> => {
     return new Promise(done => {
@@ -30,7 +29,7 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
         done
       );
     });
-  }
+  };
 
   setState = (name: string, value: any): Promise<undefined> => {
     return new Promise(done => {
@@ -42,7 +41,7 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
         done
       );
     });
-  }
+  };
 
   change = (e: React.FormEvent): Promise<undefined> => {
     const {name, value, type, target} = extractEventValue(e)!;
@@ -58,32 +57,34 @@ export default class FormActions<StateType = {}, OwnProps = {}> {
     }
 
     return this.setState(name, value);
-  }
+  };
 
-  validate = (name: string, validators: ReadonlyArray<(v: any, store: StateType) =>  undefined | null | string>) => {
+  validate = (name: string, validators: ReadonlyArray<(v: any, store: StateType) => undefined | null | string>) => {
     const {store} = this.provider.state;
     const targetValue = objectPath.get(store, name);
     this.provider.setState({
       errors: {
-        ...this.provider.state.errors as any,
+        ...(this.provider.state.errors as any),
         [name]: validators.map(v => v(targetValue, store)).filter(r => r),
       },
     });
-  }
+  };
 
   getState = (): StateType => {
     return this.provider.state.store;
-  }
+  };
 
   isPristine = () => {
-    return this.provider.state.pristine
-  }
+    return this.provider.state.pristine;
+  };
 
   isValid = () => {
-    return Object.values(this.provider.state.errors)
-      // FIXME: TypeScript may failed to parse type declaration?
-      //  or `errors: {[P in keyof StateType]: Array<string>};` is not valid?
-      .map(err => (err as Array<string>).length)
-      .reduce((sum, x) => sum + x, 0) === 0;
-  }
+    return (
+      Object.values(this.provider.state.errors)
+        // FIXME: TypeScript may failed to parse type declaration?
+        //  or `errors: {[P in keyof StateType]: Array<string>};` is not valid?
+        .map(err => (err as Array<string>).length)
+        .reduce((sum, x) => sum + x, 0) === 0
+    );
+  };
 }

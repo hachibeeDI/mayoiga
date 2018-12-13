@@ -4,6 +4,10 @@ import React, {Component, ComponentClass, StatelessComponent} from 'react';
 
 import FormActions from './FormActions';
 
+export type StateTypeRestriction = {
+  [key: string]: string | number | boolean | Array<any> | null | undefined;
+};
+
 export interface ProviderProps<StateType> {
   initialState?: StateType;
 }
@@ -18,6 +22,11 @@ export interface ProviderComponent<StateType, OwnProps> extends Component<Provid
   formActions: FormActions<StateType, OwnProps>;
 }
 
+export interface FormProvidedProps<StateType> {
+  formErrors: {[P in keyof StateType]: Array<string>};
+  formState: StateType;
+  formActions: FormActions<StateType, any>;
+}
 
 /**
  * Type for the value between contexts.
@@ -32,20 +41,30 @@ export interface ProviderValues<StateType> {
 
 export interface FormProps<StateType> {
   onSubmit(state: StateType, formActions: FormActions<StateType, any>): void | Promise<undefined>;
-  onChanged(formActions: FormActions<StateType, any>): void;
+  onChanged?(formActions: FormActions<StateType, any>): void;
   children: React.ReactNode;
 }
 
-export interface FieldProps<StateType> {
-  name: string;
+interface FieldPropsBase<StateType extends StateTypeRestriction> {
+  name: keyof StateType;
   type?: string;
   dataType?: string;
   placeholder?: string;
-  component: string | ComponentClass<any, any> | StatelessComponent<any>;
   // NOTE: basically the field is not require the prop "value" but some of those like i.e. radio/checkbox use that in different context
-  value: string;
-  onChange?: (e: React.FormEvent, formActions: FormActions<StateType, any>) => void;
-  validators: ReadonlyArray<(v: any) =>  undefined | null | string>;
-  children: React.ReactNode;
-  // ...restProps: any;
+  value?: string;
+  onChange?: (e: React.SyntheticEvent, formActions: FormActions<StateType, any>) => void;
+  validators?: ReadonlyArray<(v: any) => undefined | null | string>;
+  children?: React.ReactNode;
 }
+
+type BuildInFieldProps<StateType extends StateTypeRestriction> = FieldPropsBase<StateType> & {
+  component: string;
+} & React.InputHTMLAttributes<any>;
+
+type CustomFieldProps<StateType extends StateTypeRestriction, Props> = FieldPropsBase<StateType> & {
+  component: ComponentClass<Props, any> | StatelessComponent<Props>;
+} & {[P in keyof Props]: Props[P]};
+
+export type FieldProps<StateType extends StateTypeRestriction, ComponentProps> =
+  | BuildInFieldProps<StateType>
+  | CustomFieldProps<StateType, ComponentProps>;

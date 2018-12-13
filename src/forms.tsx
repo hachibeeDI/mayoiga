@@ -3,26 +3,21 @@ import {EventEmitter} from 'events';
 import React, {ComponentType, ComponentClass, Component, PureComponent, createContext} from 'react';
 import objectPath from 'object-path';
 
-import {ProviderValues, ProviderProps, ProviderState, FormProps, FieldProps} from './types';
+import {StateTypeRestriction, FormProvidedProps, ProviderValues, ProviderProps, ProviderState, FormProps, FieldProps} from './types';
 import {toTargetProp} from './utils/eventHandling';
 import FormActions from './FormActions';
 
 const ReactFormContext = createContext<ProviderValues<any>>({} as any);
-
-interface PropsProviderToWrapped<StateType> {
-  formErrors: {[P in keyof StateType]: Array<string>};
-  formState: StateType
-  formActions: FormActions<StateType, any>;
-}
 
 function getDisplayName(WrappedComponent: any): string {
   return WrappedComponent.displayName || WrappedComponent.name || 'Component';
 }
 
 // TODO: asynchronous validation should be here?
-export function connectForm<OwnProps, StateType extends object = {}>(initialState?: StateType) {
-
-  return (WrappedComponent: ComponentType<OwnProps & PropsProviderToWrapped<StateType>>): ComponentClass<ProviderProps<StateType> & OwnProps, ProviderState<StateType>> => {
+export function connectForm<OwnProps, StateType extends StateTypeRestriction>(initialState?: StateType) {
+  return (
+    WrappedComponent: ComponentType<OwnProps & FormProvidedProps<StateType>>
+  ): ComponentClass<ProviderProps<StateType> & OwnProps, ProviderState<StateType>> => {
     const channel = new EventEmitter();
 
     class FormProvider extends PureComponent<ProviderProps<StateType> & OwnProps, ProviderState<StateType>> {
@@ -32,7 +27,7 @@ export function connectForm<OwnProps, StateType extends object = {}>(initialStat
       constructor(props: ProviderProps<StateType> & OwnProps) {
         super(props);
 
-        const fixedInitialState: StateType = {...(props.initialState || initialState || {} as any)};
+        const fixedInitialState: StateType = {...(props.initialState || initialState || ({} as any))};
         this.state = {
           pristine: true,
           store: fixedInitialState,
@@ -99,7 +94,7 @@ class InvertPeeper extends PureComponent<InvertPeeperProps> {
 export function Form<StateType = any>({onSubmit, onChanged, children, ...restProps}: FormProps<StateType>) {
   return (
     <ReactFormContext.Consumer>
-      {({channel, formActions}: ProviderValues<any>): React.ReactNode  => {
+      {({channel, formActions}: ProviderValues<any>): React.ReactNode => {
         const innerForm = (
           <form
             onSubmit={e => {
@@ -129,7 +124,7 @@ export function Form<StateType = any>({onSubmit, onChanged, children, ...restPro
 }
 
 // TODO: implement shouldComponentUpdate if performance would be a problem
-export function Field<StateType = any>({
+export function Field<StateType extends StateTypeRestriction = any, ComponentProps = any>({
   name,
   type,
   dataType,
@@ -142,11 +137,12 @@ export function Field<StateType = any>({
   validators = [],
   children,
   ...restProps
-}: FieldProps<StateType>) {
+}: FieldProps<StateType, ComponentProps>) {
   return (
     <ReactFormContext.Consumer>
       {({pristine, state, errors, formActions, channel}: ProviderValues<any>): React.ReactNode => {
-        const stateValue = objectPath.get(state, name);
+        // keyof StateTypeRestriction should be string but TypeScript doesn't thought :thinking_face:
+        const stateValue = objectPath.get(state, name as string);
         return React.createElement(
           component,
           {
@@ -154,7 +150,7 @@ export function Field<StateType = any>({
             type,
             'data-type': dataType,
             placeholder,
-            onChange(e: React.FormEvent) {
+            onChange(e: React.SyntheticEvent) {
               // NOTE: if just changed twice, latter will cause a race condition.
               const changed = formActions.change(e).then(() => channel.emit('changed', formActions));
               if (onChange) {
@@ -165,13 +161,13 @@ export function Field<StateType = any>({
             onBlur() {
               // TODO: warnings
               if (!pristine) {
-                formActions.validate(name, validators);
+                formActions.validate(name as string, validators);
               }
             },
-            errors: errors && errors[name],
+            errors: errors && errors[name]!,
             ...toTargetProp(stateValue, type, dataType, domValue),
             ...restProps,
-          },
+          } as any,
           children
         );
       }}
