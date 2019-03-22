@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import {memo, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
+import {memo, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
 import {SyntheticEvent, Dispatch, Context, ReactNode, FC} from 'react';
 
 import {Form, Field, connectForm} from './forms';
@@ -142,12 +142,14 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         );
       },
       Field: <Name extends keyof S>(props: FieldProps<S, Name>) => {
+        const [pristine, setPristinity] = useState(true);
         const {state, dispatch} = useContext(formScope);
         const {dataType, name, validations, onChange} = props;
         const value = state[name];
 
         const handleChange = useCallback(
           (e: SyntheticEvent<HTMLInputElement>) => {
+            setPristinity(false);
             const value: string = e.currentTarget.value;
             dispatch(fieldChange(name, fieldConverter(dataType, value)));
             if (onChange) {
@@ -158,7 +160,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         );
 
         let err: string | undefined;
-        if (validations !== undefined) {
+        if (!pristine && validations !== undefined) {
           err = validations.map(v => v(value)).find(result => !!result);
         }
 
