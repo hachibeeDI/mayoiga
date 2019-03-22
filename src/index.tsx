@@ -33,10 +33,34 @@ type FormProps<S> = {
   children: ReactNode;
 };
 
+type Primitive = 'string' | 'number' | 'boolean';
+type FieldType<FT> = FT extends string
+  ? 'string'
+  : FT extends number
+  ? 'number'
+  : FT extends boolean
+  ? 'boolean'
+  : ((domVal: string) => FT);
+const PRIMITIVE_CONVERT_DEF = {
+  string: (val: string) => val,
+  number: (val: string) => parseInt(val, 10) || 0,
+  boolean: (val: string) => val === 'true',
+};
+
+function fieldConverter<FT>(dataType: FieldType<FT>, value: string): FT {
+  const def = (PRIMITIVE_CONVERT_DEF as any)[dataType as any];
+  if (def) {
+    return def(value);
+  }
+  return (dataType as any)(value);
+}
+
 type FieldProps<S, Name extends keyof S> = {
   name: Name;
   onChange?(name: Name, value: S[Name]): void;
   validations?: ReadonlyArray<Validator<S, Name>>;
+  dataType: FieldType<S[Name]>;
+
   // children(props: {value: S[Name]; onChange?(e: SyntheticEvent<unknown>): void}): ReactNode;
 };
 
@@ -119,13 +143,13 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
       },
       Field: <Name extends keyof S>(props: FieldProps<S, Name>) => {
         const {state, dispatch} = useContext(formScope);
-        const {name, validations, onChange} = props;
+        const {dataType, name, validations, onChange} = props;
         const value = state[name];
 
         const handleChange = useCallback(
           (e: SyntheticEvent<HTMLInputElement>) => {
-            const value: any = e.currentTarget.value;
-            dispatch(fieldChange(name, value));
+            const value: string = e.currentTarget.value;
+            dispatch(fieldChange(name, fieldConverter(dataType, value)));
             if (onChange) {
               onChange(name, value as any);
             }
