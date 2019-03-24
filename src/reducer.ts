@@ -5,25 +5,32 @@ import {FSA} from './actions';
 type StateCond = {[key: string]: any};
 
 type Errors<StateKeys extends string> = {[K in StateKeys]: ReadonlyArray<string>};
+type Touched<StateKeys extends string> = {[K in StateKeys]: boolean};
 
 export type Store<S extends {[key: string]: any}> = {
   errors: Errors<Extract<keyof S, string>>;
   formData: S;
-  touched: boolean;
+  touched: Touched<Extract<keyof S, string>>;
 };
 
 const createFormInitialState = <S extends StateCond>(initialState: S) => {
-  const errs = Object.keys(initialState).reduce(
-    (buf, k) => {
-      buf[k] = [];
-      return buf;
-    },
-    {} as Store<S>['errors']
-  );
+  const stateKeys = Object.keys(initialState);
   return {
-    errors: errs,
     formData: initialState,
-    touched: false,
+    errors: stateKeys.reduce(
+      (buf, k) => {
+        buf[k] = [];
+        return buf;
+      },
+      {} as Store<S>['errors']
+    ),
+    touched: stateKeys.reduce(
+      (buf, k) => {
+        buf[k] = false;
+        return buf;
+      },
+      {} as Store<S>['touched']
+    ),
   };
 };
 
@@ -38,7 +45,10 @@ export const useFormReducer = <S>(initialState: S, onSubmit: (val: S) => void) =
             ...state.formData,
             [name]: value,
           },
-          touched: true,
+          touched: {
+            ...state.touched,
+            [name]: true,
+          },
         };
       }
       case 'SUBMIT': {
