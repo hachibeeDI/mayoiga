@@ -24,8 +24,8 @@ Minimum example:
 import * as React from 'react';
 import {FC} from 'react';
 
-import {useForm, createFormScope} from '../../src/';
-import {Input, NumberInput} from '../../src/inputProtocol';
+import {useForm, createFormScope} from 'mayoiga';
+import {Input, NumberInput} from 'mayoiga/lib/forms';
 
 const required = (target: string) => (target.length === 0 ? 'required' : undefined);
 
