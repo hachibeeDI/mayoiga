@@ -12,7 +12,7 @@ type MayoigaContextValue<S> = {
   dispatch: Dispatch<FSA<S>>;
 };
 
-type Validator<S, Name extends keyof S> = (target: S[Name]) => undefined | string;
+type Validator<S, Name extends keyof S> = (target: S[Name], record: S) => undefined | string;
 
 type FormEffect<S> = {
   getState(): S;
@@ -93,7 +93,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         const validate = useCallback(
           target => {
             if (validations !== undefined) {
-              const errors = validations.map(v => v(target)).filter((result): result is string => !!result);
+              const errors = validations.map(v => v(target, state.formData)).filter((result): result is string => !!result);
               dispatch(sendErrors(name, errors));
             }
           },
