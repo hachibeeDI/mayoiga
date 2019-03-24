@@ -117,7 +117,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         return (
           <Component
             name={name}
-            value={value.toString()}
+            value={value as any /** FIXME: */}
             onChange={handleChange}
             errors={state.errors[name]}
             touched={state.touched[name]}

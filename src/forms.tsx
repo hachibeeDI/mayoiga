@@ -66,3 +66,34 @@ export function MappedRadioFactory(
     );
   };
 }
+
+export function MappedSelectFactory(
+  options: ReadonlyArray<{label: string; value: any; disabled?: boolean}>,
+  mapInputToState: (val: string) => any = val => val
+) {
+  return <S, Name extends keyof S>(props: InputProtocol<S, Name>) => {
+    const {value, name, onChange, errors, touched, ...restProps} = props;
+    const handleChange = useCallback(
+      (e: SyntheticEvent<HTMLSelectElement>) => {
+        const value = e.currentTarget.value;
+        onChange(name, mapInputToState(value));
+      },
+      [onChange]
+    );
+    return (
+      <>
+        <select {...restProps} name={name as string} value={value} onChange={handleChange}>
+          <option selected={!value} disabled={true}>
+            Please select
+          </option>
+          {options.map(({label, value, disabled}) => (
+            <option key={value} value={value} disabled={disabled}>
+              {label}
+            </option>
+          ))}
+        </select>
+        {touched && errors.length !== 0 && <div style={{color: 'red'}}>{errors[0]}</div>}
+      </>
+    );
+  };
+}

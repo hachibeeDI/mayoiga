@@ -2,9 +2,9 @@ import * as React from 'react';
 import {FC, SyntheticEvent, useCallback, useMemo} from 'react';
 
 import {useForm, createFormScope} from '../../src/';
-import {Input, NumberInput, MappedRadioFactory} from '../../src/forms';
+import {Input, NumberInput, MappedRadioFactory, MappedSelectFactory} from '../../src/forms';
 
-const required = (target: string) => (target.length === 0 ? 'required' : undefined);
+const required = (target: string | null) => (!target ? 'required' : undefined);
 
 const between = (min: number, max: number) => (target: number) => {
   if (target < min) {
@@ -19,19 +19,37 @@ const choice = function<T>(...candidates: Array<T>) {
   return (target: T) => (candidates.includes(target) ? undefined : 'You should choose from the candidates.');
 };
 
+const validateLooks = (value: string, record: typeof INITIAL_FORM_STATE) => {
+  if (record.race === 'jellyfish') {
+    return value === 'unknown' ? null : 'It should be unknown';
+  }
+};
+
+type FormState = {
+  name: string;
+  age: number;
+  race: 'squid' | 'octopus' | 'jellyfish';
+  looks: null | 'unknown' | 'boy' | 'girl';
+};
 const INITIAL_FORM_STATE = {
   name: '',
   age: 13,
-  sex: 'fish',
+  race: 'fish',
+  looks: null,
 };
 
 const {context, scope} = createFormScope<typeof INITIAL_FORM_STATE>();
 
 // NOTE: After TypeScript 3.4, you can `componen={useMemo(MappedRadioFactory([...]))}` but so far type inference is not working correctly.
-const RadioChoice = MappedRadioFactory([
-  {label: 'Fish', value: 'fish'},
+const RaceChoice = MappedRadioFactory([
   {label: 'Squid', value: 'squid'},
   {label: 'Octopus', value: 'octopus'},
+  {label: 'Jellyfish', value: 'jellyfish'},
+]);
+const LooksChoice = MappedSelectFactory([
+  {label: 'Unknown', value: 'unknown'},
+  {label: 'Boy', value: 'boy'},
+  {label: 'Girl', value: 'girl'},
 ]);
 
 const DemoForm = scope(props => {
@@ -46,7 +64,10 @@ const DemoForm = scope(props => {
         <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
       </div>
       <div style={{margin: '16px auto'}}>
-        <Field name="sex" component={RadioChoice} validations={[choice('fish', 'squid', 'octopus')]} />
+        <Field name="race" component={RaceChoice} validations={[choice('jellyfish', 'squid', 'octopus')]} />
+      </div>
+      <div style={{margin: '16px auto'}}>
+        <Field name="looks" component={LooksChoice} validations={[required, validateLooks]} />
       </div>
 
       <button disabled={Object.values(errors).some(e => !!e.length)}>submit</button>
