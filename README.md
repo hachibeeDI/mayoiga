@@ -1,3 +1,12 @@
+# Mayoiga
+
+The React Hook based form library. Of course it is TypeScript friendly.
+
+
+## Conceptual sample
+
+```
+
 import * as React from 'react';
 import {FC} from 'react';
 
@@ -49,3 +58,5 @@ const DemoForm = scope(props => {
 export default function DemoApp() {
   return <DemoForm initialState={INITIAL_FORM_STATE} onSubmit={value => alert(`submit ${JSON.stringify(value)}`)} />;
 }
+
+```
