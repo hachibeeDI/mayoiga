@@ -3,21 +3,12 @@ import * as React from 'react';
 import {memo, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
 import {SyntheticEvent, Dispatch, Context, ReactNode, FC} from 'react';
 
+import {FSA, submitValue, changeField} from './actions';
+import {Store, useFormReducer} from './reducer';
 import {InputProtocol} from './inputProtocol';
 
-const STUPID_ERR_PREFIX = '@@Err';
-
-type FormReducerActionTypes = 'CHANGE' | 'SUBMIT' | 'ERROR';
-type FSA<S> = {
-  type: FormReducerActionTypes;
-  payload: {
-    name: keyof S;
-    value: S[keyof S];
-  };
-};
-
 type MayoigaContextValue<S> = {
-  state: S;
+  state: Store<S>;
   dispatch: Dispatch<FSA<S>>;
 };
 
@@ -41,31 +32,14 @@ type FieldProps<S, Name extends keyof S> = {
   // children(props: {value: S[Name]; onChange?(e: SyntheticEvent<unknown>): void}): ReactNode;
 };
 
-function fieldChange<S>(name: keyof S, value: S[keyof S]): FSA<S> {
-  return {
-    type: 'CHANGE',
-    payload: {
-      name,
-      value,
-    },
-  };
-}
-
-function submitValue<S>(state: S): FSA<S> {
-  return {
-    type: 'SUBMIT',
-    payload: {} as any, // FIXME: I know this is wrong but it's mendokusai. Fix FSA later.
-  };
-}
-
 type MayoigaProps<S> = {
   initialState: S;
   onSubmit(value: S): void;
 };
 
-type ScopedComponentProps = {
-  pristine: boolean;
-  errors: ReadonlyArray<string>;
+type ScopedComponentProps<S> = {
+  touched: boolean;
+  errors: Store<S>['errors'];
 };
 
 // TODO: need `mapChanged(value: S): S;` ?
@@ -74,41 +48,14 @@ export function createFormScope<S>() {
 
   return {
     context: Ctx,
-    scope: function<OwnProps = {}>(ConnectedComponent: FC<OwnProps & ScopedComponentProps>) {
+    scope: function<OwnProps = {}>(ConnectedComponent: FC<OwnProps & ScopedComponentProps<S>>) {
       return (props: OwnProps & MayoigaProps<S>) => {
-        const {initialState} = props;
-        const [state, dispatch] = useReducer((state: S, action: FSA<S>) => {
-          switch (action.type) {
-            case 'CHANGE': {
-              const {name, value} = action.payload;
-              return {...state, [name]: value};
-            }
-            case 'SUBMIT': {
-              // I should repent my sin. I called side effect in reducer...
-              props.onSubmit(state);
-              return state;
-            }
-            case 'ERROR': {
-              const {name, value} = action.payload;
-              // FIXME: This is super type unsafe dirty hack. Need separate reducer to fix it.
-              return {...state, [STUPID_ERR_PREFIX]: {[name]: value}};
-            }
-            default:
-              return state;
-          }
-        }, initialState);
+        const {initialState, onSubmit} = props;
+        const [state, dispatch] = useFormReducer(initialState, onSubmit);
 
-        // FIXME:
-        let errors: ReadonlyArray<string> = [];
-        if (state) {
-          const superSillyErrField = (state as any)[STUPID_ERR_PREFIX];
-          if (superSillyErrField) {
-            errors = Object.values((state as any)[STUPID_ERR_PREFIX]).flat();
-          }
-        }
         return (
           <Ctx.Provider value={{state, dispatch}}>
-            <ConnectedComponent {...props} pristine={state === initialState} errors={errors} />
+            <ConnectedComponent {...props} touched={state.touched} errors={state.errors} />
           </Ctx.Provider>
         );
       };
@@ -127,23 +74,23 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
             onSubmit={e => {
               e.preventDefault();
               if (onSubmit) {
-                onSubmit(state);
+                onSubmit(state.formData);
               }
-              dispatch(submitValue(state));
+              dispatch(submitValue(state.formData));
             }}
           >
             {props.children}
           </form>
         );
       },
-      Field: <Name extends keyof S>(props: FieldProps<S, Name>) => {
+      Field: <Name extends Extract<keyof S, string>>(props: FieldProps<S, Name>) => {
         const {state, dispatch} = useContext(formScope);
         const {component, name, validations, onChange} = props;
-        const value = state[name];
+        const value = state.formData[name];
 
         const handleChange = useCallback(
           (name: Name, value: S[Name]) => {
-            dispatch(fieldChange(name, value));
+            dispatch(changeField(name, value));
             if (onChange) {
               onChange(name, value as any);
             }
@@ -162,13 +109,8 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
           [name, state]
         );
 
-        let err: ReadonlyArray<string> = [];
-        const superSillyErrField = (state as any)[STUPID_ERR_PREFIX];
-        if (superSillyErrField) {
-          err = superSillyErrField[name] || [];
-        }
         const Component = component;
-        return <Component name={name} value={value.toString()} onChange={handleChange} errors={err} />;
+        return <Component name={name} value={value.toString()} onChange={handleChange} errors={state.errors[name]} />;
       },
     }),
     [formScope]
