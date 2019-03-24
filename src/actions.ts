@@ -7,19 +7,23 @@ export type FSA<S> = {
   };
 };
 
-export function changeField<S>(name: keyof S, value: S[keyof S]): FSA<S> {
-  return {
-    type: 'CHANGE',
-    payload: {
-      name,
-      value,
-    },
-  };
-}
+export const changeField = <S>(name: keyof S, value: S[keyof S]): FSA<S> => ({
+  type: 'CHANGE',
+  payload: {
+    name,
+    value,
+  },
+});
 
-export function submitValue<S>(state: S): FSA<S> {
-  return {
-    type: 'SUBMIT',
-    payload: {} as any, // FIXME: I know this is wrong but it's mendokusai. Fix FSA later.
-  };
-}
+export const submitValue = <S>(state: S): FSA<S> => ({
+  type: 'SUBMIT',
+  payload: {} as any, // FIXME: I know this is wrong but it's mendokusai. Fix FSA later.
+});
+
+export const sendErrors = <S>(name: keyof S, errors: ReadonlyArray<string>): FSA<S> => ({
+  type: 'ERROR',
+  payload: {
+    name,
+    value: errors,
+  } as any, // FIXME: same
+});

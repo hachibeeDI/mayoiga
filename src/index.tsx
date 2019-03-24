@@ -1,9 +1,9 @@
 import * as React from 'react';
 
-import {memo, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
+import {memo, useEffect, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
 import {SyntheticEvent, Dispatch, Context, ReactNode, FC} from 'react';
 
-import {FSA, submitValue, changeField} from './actions';
+import {FSA, submitValue, changeField, sendErrors} from './actions';
 import {Store, useFormReducer} from './reducer';
 import {InputProtocol} from './inputProtocol';
 
@@ -12,7 +12,7 @@ type MayoigaContextValue<S> = {
   dispatch: Dispatch<FSA<S>>;
 };
 
-type Validator<S, Name extends keyof S> = (target: S[Name]) => undefined | string;
+type Validator<S, Name extends keyof S> = (target: S[Name], record: S) => undefined | string;
 
 type FormEffect<S> = {
   getState(): S;
@@ -53,9 +53,11 @@ export function createFormScope<S>() {
         const {initialState, onSubmit} = props;
         const [state, dispatch] = useFormReducer(initialState, onSubmit);
 
+        // FIXME: Why TypeScript thought `Object.values(state.touched)` is ReadonlyArray<{}>? I guess it might be due to inference failure.
+        const touchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
         return (
           <Ctx.Provider value={{state, dispatch}}>
-            <ConnectedComponent {...props} touched={state.touched} errors={state.errors} />
+            <ConnectedComponent {...props} touched={touchedAll} errors={state.errors} />
           </Ctx.Provider>
         );
       };
@@ -88,29 +90,39 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         const {component, name, validations, onChange} = props;
         const value = state.formData[name];
 
+        const validate = useCallback(
+          target => {
+            if (validations !== undefined) {
+              const errors = validations.map(v => v(target, state.formData)).filter((result): result is string => !!result);
+              dispatch(sendErrors(name, errors));
+            }
+          },
+          [validations]
+        );
+
         const handleChange = useCallback(
           (name: Name, value: S[Name]) => {
             dispatch(changeField(name, value));
             if (onChange) {
               onChange(name, value as any);
             }
-
-            if (validations !== undefined) {
-              const errors = validations.map(v => v(value)).filter((result): result is string => !!result);
-              dispatch({
-                type: 'ERROR',
-                payload: {
-                  name,
-                  value: errors,
-                } as any, // FIXME: same
-              });
-            }
+            validate(value);
           },
           [name, state]
         );
 
+        useEffect(() => validate(value));
+
         const Component = component;
-        return <Component name={name} value={value.toString()} onChange={handleChange} errors={state.errors[name]} />;
+        return (
+          <Component
+            name={name}
+            value={value as any /** FIXME: */}
+            onChange={handleChange}
+            errors={state.errors[name]}
+            touched={state.touched[name]}
+          />
+        );
       },
     }),
     [formScope]
