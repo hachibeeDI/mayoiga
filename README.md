@@ -5,7 +5,7 @@ The React Hook based form library. Of course it is TypeScript friendly.
 
 ## Conceptual sample
 
-```
+```typeScript
 
 import * as React from 'react';
 import {FC} from 'react';

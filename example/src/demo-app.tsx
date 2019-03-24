@@ -1,8 +1,8 @@
 import * as React from 'react';
-import {FC} from 'react';
+import {FC, SyntheticEvent, useCallback} from 'react';
 
 import {useForm, createFormScope} from '../../src/';
-import {Input, NumberInput} from '../../src/inputProtocol';
+import {Input, NumberInput, MappedRadioFactory} from '../../src/forms';
 
 const required = (target: string) => (target.length === 0 ? 'required' : undefined);
 
@@ -31,14 +31,22 @@ const DemoForm = scope(props => {
   const {Form, Field} = useForm(context);
   return (
     <Form onSubmit={value => console.log(value)}>
-      <div>
+      <div style={{margin: '16px auto'}}>
         <Field name="name" component={Input} validations={[required]} />
       </div>
-      <div>
+      <div style={{margin: '16px auto'}}>
         <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
       </div>
-      <div>
-        <Field name="sex" component={Input} validations={[choice('fish', 'squid', 'octopus')]} />
+      <div style={{margin: '16px auto'}}>
+        <Field
+          name="sex"
+          component={MappedRadioFactory([
+            {label: 'Fish', value: 'fish'},
+            {label: 'Squid', value: 'squid'},
+            {label: 'Octopus', value: 'octopus'},
+          ])}
+          validations={[choice('fish', 'squid', 'octopus')]}
+        />
       </div>
 
       <button disabled={!props.touched || Object.values(props.errors).some(e => !!e.length)}>submit</button>
@@ -47,5 +55,10 @@ const DemoForm = scope(props => {
 });
 
 export default function DemoApp() {
-  return <DemoForm initialState={INITIAL_FORM_STATE} onSubmit={value => alert(`submit ${JSON.stringify(value)}`)} />;
+  return (
+    <section>
+      <h2>Mayoiga form demo</h2>
+      <DemoForm initialState={INITIAL_FORM_STATE} onSubmit={value => alert(`submit ${JSON.stringify(value)}`)} />
+    </section>
+  );
 }
