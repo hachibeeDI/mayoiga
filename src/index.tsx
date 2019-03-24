@@ -3,7 +3,7 @@ import * as React from 'react';
 import {memo, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
 import {SyntheticEvent, Dispatch, Context, ReactNode, FC} from 'react';
 
-import {FSA, submitValue, changeField} from './actions';
+import {FSA, submitValue, changeField, sendErrors} from './actions';
 import {Store, useFormReducer} from './reducer';
 import {InputProtocol} from './inputProtocol';
 
@@ -97,13 +97,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
 
             if (validations !== undefined) {
               const errors = validations.map(v => v(value)).filter((result): result is string => !!result);
-              dispatch({
-                type: 'ERROR',
-                payload: {
-                  name,
-                  value: errors,
-                } as any, // FIXME: same
-              });
+              dispatch(sendErrors(name, errors));
             }
           },
           [name, state]
