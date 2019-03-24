@@ -3,12 +3,11 @@ import * as React from 'react';
 import {memo, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
 import {SyntheticEvent, Dispatch, Context, ReactNode, FC} from 'react';
 
-import {Form, Field, connectForm} from './forms';
+import {InputProtocol} from './inputProtocol';
 
-export {Form, Field, connectForm};
-export default {Form, Field, connectForm};
+const STUPID_ERR_PREFIX = '@@Err';
 
-type FormReducerActionTypes = 'CHANGE' | 'SUBMIT';
+type FormReducerActionTypes = 'CHANGE' | 'SUBMIT' | 'ERROR';
 type FSA<S> = {
   type: FormReducerActionTypes;
   payload: {
@@ -33,33 +32,11 @@ type FormProps<S> = {
   children: ReactNode;
 };
 
-type Primitive = 'string' | 'number' | 'boolean';
-type FieldType<FT> = FT extends string
-  ? 'string'
-  : FT extends number
-  ? 'number'
-  : FT extends boolean
-  ? 'boolean'
-  : ((domVal: string) => FT);
-const PRIMITIVE_CONVERT_DEF = {
-  string: (val: string) => val,
-  number: (val: string) => parseInt(val, 10) || 0,
-  boolean: (val: string) => val === 'true',
-};
-
-function fieldConverter<FT>(dataType: FieldType<FT>, value: string): FT {
-  const def = (PRIMITIVE_CONVERT_DEF as any)[dataType as any];
-  if (def) {
-    return def(value);
-  }
-  return (dataType as any)(value);
-}
-
 type FieldProps<S, Name extends keyof S> = {
   name: Name;
   onChange?(name: Name, value: S[Name]): void;
   validations?: ReadonlyArray<Validator<S, Name>>;
-  dataType: FieldType<S[Name]>;
+  component: FC<InputProtocol<S, Name>>;
 
   // children(props: {value: S[Name]; onChange?(e: SyntheticEvent<unknown>): void}): ReactNode;
 };
@@ -86,13 +63,18 @@ type MayoigaProps<S> = {
   onSubmit(value: S): void;
 };
 
+type ScopedComponentProps = {
+  pristine: boolean;
+  errors: ReadonlyArray<string>;
+};
+
 // TODO: need `mapChanged(value: S): S;` ?
 export function createFormScope<S>() {
   const Ctx = createContext((null as any) as MayoigaContextValue<S>);
 
   return {
     context: Ctx,
-    scope: function<OwnProps = {}>(ConnectedComponent: FC<OwnProps>) {
+    scope: function<OwnProps = {}>(ConnectedComponent: FC<OwnProps & ScopedComponentProps>) {
       return (props: OwnProps & MayoigaProps<S>) => {
         const {initialState} = props;
         const [state, dispatch] = useReducer((state: S, action: FSA<S>) => {
@@ -106,14 +88,27 @@ export function createFormScope<S>() {
               props.onSubmit(state);
               return state;
             }
+            case 'ERROR': {
+              const {name, value} = action.payload;
+              // FIXME: This is super type unsafe dirty hack. Need separate reducer to fix it.
+              return {...state, [STUPID_ERR_PREFIX]: {[name]: value}};
+            }
             default:
               return state;
           }
         }, initialState);
 
+        // FIXME:
+        let errors: ReadonlyArray<string> = [];
+        if (state) {
+          const superSillyErrField = (state as any)[STUPID_ERR_PREFIX];
+          if (superSillyErrField) {
+            errors = Object.values((state as any)[STUPID_ERR_PREFIX]).flat();
+          }
+        }
         return (
           <Ctx.Provider value={{state, dispatch}}>
-            <ConnectedComponent {...props} />
+            <ConnectedComponent {...props} pristine={state === initialState} errors={errors} />
           </Ctx.Provider>
         );
       };
@@ -142,34 +137,38 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         );
       },
       Field: <Name extends keyof S>(props: FieldProps<S, Name>) => {
-        const [pristine, setPristinity] = useState(true);
         const {state, dispatch} = useContext(formScope);
-        const {dataType, name, validations, onChange} = props;
+        const {component, name, validations, onChange} = props;
         const value = state[name];
 
         const handleChange = useCallback(
-          (e: SyntheticEvent<HTMLInputElement>) => {
-            setPristinity(false);
-            const value: string = e.currentTarget.value;
-            dispatch(fieldChange(name, fieldConverter(dataType, value)));
+          (name: Name, value: S[Name]) => {
+            dispatch(fieldChange(name, value));
             if (onChange) {
               onChange(name, value as any);
+            }
+
+            if (validations !== undefined) {
+              const errors = validations.map(v => v(value)).filter((result): result is string => !!result);
+              dispatch({
+                type: 'ERROR',
+                payload: {
+                  name,
+                  value: errors,
+                } as any, // FIXME: same
+              });
             }
           },
           [name, state]
         );
 
-        let err: string | undefined;
-        if (!pristine && validations !== undefined) {
-          err = validations.map(v => v(value)).find(result => !!result);
+        let err: ReadonlyArray<string> = [];
+        const superSillyErrField = (state as any)[STUPID_ERR_PREFIX];
+        if (superSillyErrField) {
+          err = superSillyErrField[name] || [];
         }
-
-        return (
-          <>
-            <input key={name as string} name={name as string} value={value.toString()} onChange={handleChange} />
-            {err && <div style={{color: 'red'}}>{err}</div>}
-          </>
-        );
+        const Component = component;
+        return <Component name={name} value={value.toString()} onChange={handleChange} errors={err} />;
       },
     }),
     [formScope]
