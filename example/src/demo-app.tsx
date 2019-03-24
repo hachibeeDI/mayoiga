@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {FC, SyntheticEvent, useCallback} from 'react';
+import {FC, SyntheticEvent, useCallback, useMemo} from 'react';
 
 import {useForm, createFormScope} from '../../src/';
 import {Input, NumberInput, MappedRadioFactory} from '../../src/forms';
@@ -27,8 +27,16 @@ const INITIAL_FORM_STATE = {
 
 const {context, scope} = createFormScope<typeof INITIAL_FORM_STATE>();
 
+// NOTE: After TypeScript 3.4, you can `componen={useMemo(MappedRadioFactory([...]))}` but so far type inference is not working correctly.
+const RadioChoice = MappedRadioFactory([
+  {label: 'Fish', value: 'fish'},
+  {label: 'Squid', value: 'squid'},
+  {label: 'Octopus', value: 'octopus'},
+]);
+
 const DemoForm = scope(props => {
   const {Form, Field} = useForm(context);
+  const {touched, errors} = props;
   return (
     <Form onSubmit={value => console.log(value)}>
       <div style={{margin: '16px auto'}}>
@@ -38,18 +46,10 @@ const DemoForm = scope(props => {
         <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
       </div>
       <div style={{margin: '16px auto'}}>
-        <Field
-          name="sex"
-          component={MappedRadioFactory([
-            {label: 'Fish', value: 'fish'},
-            {label: 'Squid', value: 'squid'},
-            {label: 'Octopus', value: 'octopus'},
-          ])}
-          validations={[choice('fish', 'squid', 'octopus')]}
-        />
+        <Field name="sex" component={RadioChoice} validations={[choice('fish', 'squid', 'octopus')]} />
       </div>
 
-      <button disabled={!props.touched || Object.values(props.errors).some(e => !!e.length)}>submit</button>
+      <button disabled={Object.values(errors).some(e => !!e.length)}>submit</button>
     </Form>
   );
 });

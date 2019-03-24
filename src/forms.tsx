@@ -12,7 +12,7 @@ import {InputProtocol} from './InputProtocol';
 
 export function MappedInputFactory(mapInputToState: (val: string) => any = val => val /** FIXME: fmmmmmm */) {
   return <S, Name extends keyof S>(props: InputProtocol<S, Name>) => {
-    const {name, onChange, errors, touched} = props;
+    const {name, onChange, errors, touched, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLInputElement>) => {
         const value = e.currentTarget.value;
@@ -22,7 +22,7 @@ export function MappedInputFactory(mapInputToState: (val: string) => any = val =
     );
     return (
       <>
-        <input {...props} name={name as string} onChange={handleChange} />
+        <input {...restProps} name={name as string} onChange={handleChange} />
         {touched && errors.length !== 0 && <div style={{color: 'red'}}>{errors[0]}</div>}
       </>
     );
@@ -38,7 +38,7 @@ export function MappedRadioFactory(
   mapInputToState: (val: string) => any = val => val
 ) {
   return <S, Name extends keyof S>(props: InputProtocol<S, Name>) => {
-    const {name, onChange, errors, touched} = props;
+    const {name, onChange, errors, touched, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLInputElement>) => {
         const value = e.currentTarget.value;
@@ -49,10 +49,9 @@ export function MappedRadioFactory(
     return (
       <>
         {candidates.map(({label, value}) => (
-          <label>
+          <label key={value}>
             <input
-              key={value}
-              {...props}
+              {...restProps}
               type="radio"
               name={name as string}
               value={value}
