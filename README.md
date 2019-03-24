@@ -3,7 +3,21 @@
 The React Hook based form library. Of course it is TypeScript friendly.
 
 
+## Supported functionality
+
+- TypeScript
+- Form level validation
+- Submit level validation
+- Cooperate with any component library
+
+With less boilerplate code!!
+
+You can see more working demo (under the example directory)[example/src/demo-app.tsx] .
+
+
 ## Conceptual sample
+
+Minimum example:
 
 ```typeScript
 
@@ -40,15 +54,9 @@ const DemoForm = scope(props => {
   const {Form, Field} = useForm(context);
   return (
     <Form onSubmit={value => console.log(value)}>
-      <div>
-        <Field name="name" component={Input} validations={[required]} />
-      </div>
-      <div>
-        <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
-      </div>
-      <div>
-        <Field name="sex" component={Input} validations={[choice('fish', 'squid', 'octopus')]} />
-      </div>
+      <Field name="name" component={Input} validations={[required]} />
+      <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
+      <Field name="sex" component={Input} validations={[choice('fish', 'squid', 'octopus')]} />
 
       <button disabled={!props.touched || Object.values(props.errors).some(e => !!e.length)}>submit</button>
     </Form>
