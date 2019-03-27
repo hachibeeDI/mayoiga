@@ -19,7 +19,9 @@ type FormEffect<S> = {
 };
 
 type FormProps<S> = {
-  onSubmit(value: S): void;
+  onSubmit?(value: S): void;
+  // TODO: should support onChange handler and effect on Form level?
+  // onChange?(value: S, action: ACT): void;
   children: ReactNode;
 };
 
