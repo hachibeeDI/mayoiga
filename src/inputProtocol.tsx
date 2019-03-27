@@ -4,8 +4,9 @@ import {useCallback, InputHTMLAttributes, SyntheticEvent} from 'react';
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 
-export type InputProtocol<S, Name extends keyof S> = Omit<InputHTMLAttributes<any>, 'name' | 'onChange'> & {
+export type InputProtocol<S, Name extends keyof S> = Omit<InputHTMLAttributes<any>, 'name' | 'onChange' | 'value'> & {
   name: Name;
+  value: S[Name];
   errors: ReadonlyArray<string>;
   touched: boolean;
   onChange(name: Name, value: S[Name]): void;
