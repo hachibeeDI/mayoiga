@@ -34,7 +34,10 @@ const createFormInitialState = <S extends StateCond>(initialState: S) => {
   };
 };
 
-export const useFormReducer = <S>(initialState: S, onSubmit: (val: S) => void) =>
+export const useFormReducer = <S>(
+  initialState: S,
+  onSubmit: (hasErrors: boolean, value: S, formInfo: {errors: Store<S>['errors']; touched: boolean}) => void
+) =>
   useReducer((state: Store<S>, action: FSA<S>) => {
     switch (action.type) {
       case 'CHANGE': {
@@ -52,8 +55,14 @@ export const useFormReducer = <S>(initialState: S, onSubmit: (val: S) => void) =
         };
       }
       case 'SUBMIT': {
+        // FIXME: :thinking_face:
+        const haveTouchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
+        const hasAnyError = (Object.values(state.errors) as ReadonlyArray<string>).some(errs => errs.length !== 0);
         // I should repent my sin. I called side effect in reducer...
-        onSubmit(state.formData);
+        onSubmit(hasAnyError, state.formData, {
+          errors: state.errors,
+          touched: haveTouchedAll,
+        });
         return state;
       }
       case 'ERROR': {

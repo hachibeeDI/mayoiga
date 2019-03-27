@@ -34,7 +34,7 @@ type FieldProps<S, Name extends keyof S> = {
 
 type MayoigaProps<S> = {
   initialState: S;
-  onSubmit(value: S): void;
+  onSubmit(hasErrors: boolean, value: S, formInfo: {errors: Store<S>['errors']; touched: boolean}): void;
 };
 
 type ScopedComponentProps<S> = {

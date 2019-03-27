@@ -79,7 +79,15 @@ export default function DemoApp() {
   return (
     <section>
       <h2>Mayoiga form demo</h2>
-      <DemoForm initialState={INITIAL_FORM_STATE} onSubmit={value => alert(`submit ${JSON.stringify(value)}`)} />
+      <DemoForm
+        initialState={INITIAL_FORM_STATE}
+        onSubmit={(hasError, value, {errors}) => {
+          if (hasError) {
+            return alert(`errors! ${JSON.stringify(errors)}`);
+          }
+          alert(`submit ${JSON.stringify(value)}`);
+        }}
+      />
     </section>
   );
 }
