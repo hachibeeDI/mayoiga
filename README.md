@@ -5,9 +5,10 @@ The React Hook based form library. Of course it is TypeScript friendly.
 
 ## Supported functionality
 
-- TypeScript
+- TypeScript oriented
 - Form level validation
 - Submit level validation
+- Less learning cost
 - Cooperate with any component library
 
 With less boilerplate code!!
@@ -45,7 +46,7 @@ const choice = function<T>(...candidates: Array<T>) {
 const INITIAL_FORM_STATE = {
   name: '',
   age: 13,
-  sex: 'fish',
+  seed: 'fish',
 };
 
 const {context, scope} = createFormScope<typeof INITIAL_FORM_STATE>();
@@ -56,7 +57,7 @@ const DemoForm = scope(props => {
     <Form onSubmit={value => console.log(value)}>
       <Field name="name" component={Input} validations={[required]} />
       <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
-      <Field name="sex" component={Input} validations={[choice('fish', 'squid', 'octopus')]} />
+      <Field name="seed" component={Input} validations={[choice('fish', 'squid', 'octopus')]} />
 
       <button disabled={!props.touched || Object.values(props.errors).some(e => !!e.length)}>submit</button>
     </Form>
