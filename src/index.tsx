@@ -42,6 +42,7 @@ type MayoigaProps<S> = {
 type ScopedComponentProps<S> = {
   touched: boolean;
   errors: Store<S>['errors'];
+  formState: S;
 };
 
 // TODO: need `mapChanged(value: S): S;` ?
@@ -59,7 +60,7 @@ export function createFormScope<S>() {
         const touchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
         return (
           <Ctx.Provider value={{state, dispatch}}>
-            <ConnectedComponent {...props} touched={touchedAll} errors={state.errors} />
+            <ConnectedComponent {...props} formState={state.formData} touched={touchedAll} errors={state.errors} />
           </Ctx.Provider>
         );
       };
@@ -90,7 +91,6 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
       Field: <Name extends Extract<keyof S, string>>(props: FieldProps<S, Name>) => {
         const {state, dispatch} = useContext(formScope);
         const {component, name, validations, onChange} = props;
-        const value = state.formData[name];
 
         const validate = useCallback(
           target => {
@@ -113,6 +113,9 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
           [name, state]
         );
 
+        const value = state.formData[name];
+        const errors = state.errors[name];
+        const touched = state.touched[name];
         useEffect(() => validate(value));
 
         const Component = component;
@@ -121,8 +124,8 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
             name={name}
             value={value as any /** FIXME: */}
             onChange={handleChange}
-            errors={state.errors[name]}
-            touched={state.touched[name]}
+            errors={errors}
+            touched={touched}
           />
         );
       },
