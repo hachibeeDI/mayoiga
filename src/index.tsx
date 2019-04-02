@@ -25,13 +25,13 @@ type FormProps<S> = {
   children: ReactNode;
 };
 
-type FieldProps<S, Name extends keyof S> = {
+type FieldProps<S, Name extends keyof S, ComponentProps> = {
   name: Name;
   onChange?(name: Name, value: S[Name]): void;
   validations?: ReadonlyArray<Validator<S, Name>>;
-  component: FC<InputProtocol<S, Name>>;
 
-  // children(props: {value: S[Name]; onChange?(e: SyntheticEvent<unknown>): void}): ReactNode;
+  componentProps?: ComponentProps; // FIXME:
+  component: FC<InputProtocol<S, Name, ComponentProps>>;
 };
 
 type MayoigaProps<S> = {
@@ -58,10 +58,13 @@ export function createFormScope<S>() {
 
         // FIXME: Why TypeScript thought `Object.values(state.touched)` is ReadonlyArray<{}>? I guess it might be due to inference failure.
         const touchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
-        return (
-          <Ctx.Provider value={{state, dispatch}}>
-            <ConnectedComponent {...props} formState={state.formData} touched={touchedAll} errors={state.errors} />
-          </Ctx.Provider>
+        return useMemo(
+          () => (
+            <Ctx.Provider value={{state, dispatch}}>
+              <ConnectedComponent {...props} formState={state.formData} touched={touchedAll} errors={state.errors} />
+            </Ctx.Provider>
+          ),
+          [state.formData, touchedAll, state.errors]
         );
       };
     },
@@ -88,7 +91,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
           </form>
         );
       },
-      Field: <Name extends Extract<keyof S, string>>(props: FieldProps<S, Name>) => {
+      Field: <Name extends Extract<keyof S, string>, ComponentProps = undefined>(props: FieldProps<S, Name, ComponentProps>) => {
         const {state, dispatch} = useContext(formScope);
         const {component, name, validations, onChange} = props;
 
@@ -126,6 +129,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
             onChange={handleChange}
             errors={errors}
             touched={touched}
+            delegatedProps={props.componentProps!}
           />
         );
       },

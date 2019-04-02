@@ -12,7 +12,7 @@ import {InputProtocol} from './InputProtocol';
 
 // TODO: mapStateToValue (val: S[Name]) => string
 export function MappedInputFactory(mapInputToState: (val: string) => any = val => val /** FIXME: fmmmmmm */) {
-  return <S, Name extends keyof S>(props: InputProtocol<S, Name>) => {
+  return <S, Name extends keyof S>(props: InputProtocol<S, Name, undefined>) => {
     const {name, value, onChange, errors, touched, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLInputElement>) => {
@@ -38,7 +38,7 @@ export function MappedRadioFactory(
   /** FIXME: fmmmmmm, I think I can write infer which returns `never` if type is invalid but... */
   mapInputToState: (val: string) => any = val => val
 ) {
-  return <S, Name extends keyof S>(props: InputProtocol<S, Name>) => {
+  return <S, Name extends keyof S>(props: InputProtocol<S, Name, undefined>) => {
     const {name, onChange, errors, touched, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLInputElement>) => {
@@ -72,7 +72,7 @@ export function MappedSelectFactory(
   options: ReadonlyArray<{label: string; value: any; disabled?: boolean}>,
   mapInputToState: (val: string) => any = val => val
 ) {
-  return <S, Name extends keyof S>(props: InputProtocol<S, Name>) => {
+  return <S, Name extends keyof S>(props: InputProtocol<S, Name, undefined>) => {
     const {value, name, onChange, errors, touched, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLSelectElement>) => {
