@@ -2,7 +2,15 @@ import * as React from 'react';
 import {FC, SyntheticEvent, useCallback, useMemo} from 'react';
 
 import {useForm, createFormScope} from '../../src/';
+import {InputProtocol} from '../../src/InputProtocol';
 import {Input, NumberInput, MappedRadioFactory, MappedSelectFactory} from '../../src/forms';
+
+type FormState = {
+  name: string;
+  age: number;
+  race: 'squid' | 'octopus' | 'jellyfish';
+  looks: null | 'unknown' | 'boy' | 'girl';
+};
 
 const required = (target: string | null) => (!target ? 'required' : undefined);
 
@@ -19,26 +27,20 @@ const choice = function<T>(...candidates: Array<T>) {
   return (target: T) => (candidates.includes(target) ? undefined : 'You should choose from the candidates.');
 };
 
-const validateLooks = (value: string, record: typeof INITIAL_FORM_STATE) => {
+const validateLooks = (value: string, record: FormState) => {
   if (record.race === 'jellyfish') {
     return value === 'unknown' ? null : 'It should be unknown';
   }
 };
 
-type FormState = {
-  name: string;
-  age: number;
-  race: 'squid' | 'octopus' | 'jellyfish';
-  looks: null | 'unknown' | 'boy' | 'girl';
-};
-const INITIAL_FORM_STATE = {
+const INITIAL_FORM_STATE: FormState = {
   name: '',
   age: 13,
-  race: 'fish',
+  race: 'jellyfish',
   looks: null,
 };
 
-const {context, scope} = createFormScope<typeof INITIAL_FORM_STATE>();
+const {context, scope} = createFormScope<FormState>();
 
 // NOTE: After TypeScript 3.4, you can `componen={useMemo(MappedRadioFactory([...]))}` but so far type inference is not working correctly.
 const RaceChoice = MappedRadioFactory([
@@ -58,7 +60,7 @@ const DemoForm = scope(props => {
   return (
     <Form onSubmit={value => console.log(value)}>
       <div style={{margin: '16px auto'}}>
-        <Field name="name" component={Input} validations={[required]} />
+        <Field name="name" component={Input as FC<InputProtocol<FormState, 'name'>>} validations={[required]} />
       </div>
       <div style={{margin: '16px auto'}}>
         <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
