@@ -119,7 +119,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         const value = state.formData[name];
         const errors = state.errors[name];
         const touched = state.touched[name];
-        useEffect(() => validate(value));
+        useEffect(() => validate(value), []);
 
         const Component = component;
         return (
