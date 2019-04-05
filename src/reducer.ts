@@ -38,45 +38,52 @@ export const useFormReducer = <S>(
   initialState: S,
   onSubmit: (hasErrors: boolean, value: S, formInfo: {errors: Store<S>['errors']; touched: boolean}) => void
 ) =>
-  useReducer((state: Store<S>, action: FSA<S>) => {
-    switch (action.type) {
-      case 'CHANGE': {
-        const {name, value} = action.payload;
-        return {
-          ...state,
-          formData: {
-            ...state.formData,
-            [name]: value,
-          },
-          touched: {
-            ...state.touched,
-            [name]: true,
-          },
-        };
+  useReducer(
+    (state: Store<S>, action: FSA<S>) => {
+      switch (action.type) {
+        case 'SWAP': {
+          return createFormInitialState(action.payload);
+        }
+        case 'CHANGE': {
+          const {name, value} = action.payload;
+          return {
+            ...state,
+            formData: {
+              ...state.formData,
+              [name]: value,
+            },
+            touched: {
+              ...state.touched,
+              [name]: true,
+            },
+          };
+        }
+        case 'SUBMIT': {
+          // FIXME: :thinking_face:
+          const haveTouchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
+          const hasAnyError = (Object.values(state.errors) as ReadonlyArray<string>).some(errs => errs.length !== 0);
+          // I should repent my sin. I called side effect in reducer...
+          onSubmit(hasAnyError, state.formData, {
+            errors: state.errors,
+            touched: haveTouchedAll,
+          });
+          return state;
+        }
+        case 'ERROR': {
+          const {name, value} = action.payload;
+          // FIXME: This is super type unsafe dirty hack. Need separate reducer to fix it.
+          return {
+            ...state,
+            errors: {
+              ...state.errors,
+              [name]: value,
+            },
+          };
+        }
+        default:
+          return state;
       }
-      case 'SUBMIT': {
-        // FIXME: :thinking_face:
-        const haveTouchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
-        const hasAnyError = (Object.values(state.errors) as ReadonlyArray<string>).some(errs => errs.length !== 0);
-        // I should repent my sin. I called side effect in reducer...
-        onSubmit(hasAnyError, state.formData, {
-          errors: state.errors,
-          touched: haveTouchedAll,
-        });
-        return state;
-      }
-      case 'ERROR': {
-        const {name, value} = action.payload;
-        // FIXME: This is super type unsafe dirty hack. Need separate reducer to fix it.
-        return {
-          ...state,
-          errors: {
-            ...state.errors,
-            [name]: value,
-          },
-        };
-      }
-      default:
-        return state;
-    }
-  }, createFormInitialState(initialState));
+    },
+    initialState,
+    createFormInitialState
+  );

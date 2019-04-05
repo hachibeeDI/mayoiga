@@ -1,11 +1,32 @@
-export type FormReducerActionTypes = 'CHANGE' | 'SUBMIT' | 'ERROR';
-export type FSA<S> = {
-  type: FormReducerActionTypes;
-  payload: {
-    name: keyof S;
-    value: S[keyof S];
-  };
-};
+export type FormReducerActionTypes = 'SWAP' | 'CHANGE' | 'SUBMIT' | 'ERROR';
+export type FSA<S> =
+  | {
+      type: 'SWAP';
+      payload: S;
+    }
+  | {
+      type: 'CHANGE';
+      payload: {
+        name: keyof S;
+        value: S[keyof S];
+      };
+    }
+  | {
+      type: 'SUBMIT';
+      payload: {};
+    }
+  | {
+      type: 'ERROR';
+      payload: {
+        name: keyof S;
+        value: ReadonlyArray<string>;
+      };
+    };
+
+export const swap = <S>(newInitialState: S): FSA<S> => ({
+  type: 'SWAP',
+  payload: newInitialState,
+});
 
 export const changeField = <S>(name: keyof S, value: S[keyof S]): FSA<S> => ({
   type: 'CHANGE',
@@ -17,7 +38,7 @@ export const changeField = <S>(name: keyof S, value: S[keyof S]): FSA<S> => ({
 
 export const submitValue = <S>(state: S): FSA<S> => ({
   type: 'SUBMIT',
-  payload: {} as any, // FIXME: I know this is wrong but it's mendokusai. Fix FSA later.
+  payload: {},
 });
 
 export const sendErrors = <S>(name: keyof S, errors: ReadonlyArray<string>): FSA<S> => ({

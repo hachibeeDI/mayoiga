@@ -3,7 +3,7 @@ import * as React from 'react';
 import {memo, useEffect, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
 import {SyntheticEvent, Dispatch, Context, ReactNode, FC} from 'react';
 
-import {FSA, submitValue, changeField, sendErrors} from './actions';
+import {FSA, swap, submitValue, changeField, sendErrors} from './actions';
 import {Store, useFormReducer} from './reducer';
 import {InputProtocol} from './inputProtocol';
 
@@ -57,6 +57,9 @@ export function createFormScope<S>() {
       return (props: OwnProps & MayoigaProps<S>) => {
         const {initialState, onSubmit} = props;
         const [state, dispatch] = useFormReducer(initialState, onSubmit);
+
+        // TODO: I assumed useReducer is re-render if initialState was changed but doesn't. Need investigation though, I'll address by the useEffect for the time being.
+        useEffect(() => dispatch(swap(initialState)), [initialState]);
 
         // FIXME: Why TypeScript thought `Object.values(state.touched)` is ReadonlyArray<{}>? I guess it might be due to inference failure.
         const touchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
