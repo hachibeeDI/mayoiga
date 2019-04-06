@@ -9,16 +9,27 @@ The React Hook based form library. Of course it is TypeScript friendly.
 - Form level validation
 - Submit level validation
 - Less learning cost
-- Cooperate with any component library
+- Cooperate with any component library (Bootstarap, MaterialDesign, ant-design or whatever )
 
 With less boilerplate code!!
 
 You can see more working demo [under the example directory](example/src/demo-app.tsx) .
 
 
-## Conceptual sample
+## How to use
 
-Minimum example:
+### API you should see
+
+There are only two functions which you should know to use Mayoiga.
+
+- useForm
+- createFormScope
+
+And if you would like to bring it to production, you need to know how to about `InputProtocol`.
+To know about that, `mayoiga/lib/forms` can be a good example.
+
+
+### Minimum example:
 
 ```typeScript
 
