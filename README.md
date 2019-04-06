@@ -22,11 +22,13 @@ You can see more working demo [under the example directory](example/src/demo-app
 
 There are only two functions which you should know to use Mayoiga.
 
-- useForm
-- createFormScope
+- [useForm](https://hachibeedi.github.io/mayoiga/modules/_mayoiga_.html#useform)
+- [createFormScope](https://hachibeedi.github.io/mayoiga/modules/_mayoiga_.html#createformscope)
 
-And if you would like to bring it to production, you need to know how to about `InputProtocol`.
+And if you would like to bring it to production, you need to know how to about [InputProtocol](https://hachibeedi.github.io/mayoiga/modules/_inputprotocol_.html#inputprotocol).
 To know about that, `mayoiga/lib/forms` can be a good example.
+
+There is a short article which explains Mayoiga https://dev.to/hachibeedi/react-use-form-type-safe-react-hooks-based-form-utility-4k5h.
 
 
 ### Minimum example:
