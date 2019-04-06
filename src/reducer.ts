@@ -19,14 +19,16 @@ const createFormInitialState = <S extends StateCond>(initialState: S) => {
     formData: initialState,
     errors: stateKeys.reduce(
       (buf, k) => {
-        buf[k] = [];
+        // NOTE: because typedoc is using old version of TypeScript.
+        (buf as any)[k] = [];
         return buf;
       },
       {} as Store<S>['errors']
     ),
     touched: stateKeys.reduce(
       (buf, k) => {
-        buf[k] = false;
+        // NOTE: same as above. Hey! should I make the code dirty because of document automation???
+        (buf as any)[k] = false;
         return buf;
       },
       {} as Store<S>['touched']
