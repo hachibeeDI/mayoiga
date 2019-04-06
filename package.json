@@ -11,6 +11,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf lib/",
+    "docs": "typedoc --name Mayoiga --mode modules --excludePrivate --out docs/",
     "compile": "tsc",
     "prepublish": "npm run clean && npm run compile"
   },
@@ -51,12 +52,15 @@
     "tslint-immutable": "^5.5.1",
     "tslint-plugin-prettier": "^2.0.1",
     "tslint-react": "^3.6.0",
+    "typedoc": "^0.14.2",
     "typescript": "^3.3.4000",
     "typescript-eslint-parser": "^22.0.0",
     "webpack": "^4.29.6",
     "webpack-cli": "^3.3.0",
     "webpack-dev-server": "^3.2.1"
   },
-  "dependencies": {
-  }
+  "peerDependencies": {
+    "react": "^16.8.4"
+  },
+  "dependencies": {}
 }
