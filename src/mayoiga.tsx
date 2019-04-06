@@ -57,8 +57,7 @@ export function createFormScope<S>() {
         // TODO: I assumed useReducer is re-render if initialState was changed but doesn't. Need investigation though, I'll address by the useEffect for the time being.
         useEffect(() => dispatch(swap(initialState)), [initialState]);
 
-        // FIXME: Why TypeScript thought `Object.values(state.touched)` is ReadonlyArray<{}>? I guess it might be due to inference failure.
-        const touchedAll = (Object.values(state.touched) as ReadonlyArray<boolean>).every(v => v);
+        const touchedAll = Object.values<boolean>(state.touched).every(v => v);
         return useMemo(
           () => (
             <Ctx.Provider value={{state, dispatch}}>

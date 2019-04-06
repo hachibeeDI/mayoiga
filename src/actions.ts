@@ -46,5 +46,5 @@ export const sendErrors = <S>(name: keyof S, errors: ReadonlyArray<string>): FSA
   payload: {
     name,
     value: errors,
-  } as any, // FIXME: same
+  },
 });

@@ -71,7 +71,6 @@ export const useFormReducer = <S>(
         }
         case 'ERROR': {
           const {name, value} = action.payload;
-          // FIXME: This is super type unsafe dirty hack. Need separate reducer to fix it.
           return {
             ...state,
             errors: {
