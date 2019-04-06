@@ -13,7 +13,7 @@ The React Hook based form library. Of course it is TypeScript friendly.
 
 With less boilerplate code!!
 
-You can see more working demo (under the example directory)[example/src/demo-app.tsx] .
+You can see more working demo [under the example directory](example/src/demo-app.tsx) .
 
 
 ## Conceptual sample
