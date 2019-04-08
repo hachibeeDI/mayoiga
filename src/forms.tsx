@@ -8,7 +8,7 @@ import * as React from 'react';
 
 import {useCallback, InputHTMLAttributes, SyntheticEvent} from 'react';
 
-import {InputProtocol} from './InputProtocol';
+import {InputProtocol} from './inputProtocol';
 
 // TODO: mapStateToValue (val: S[Name]) => string
 export function MappedInputFactory(mapInputToState: (val: string) => any = val => val /** FIXME: fmmmmmm */) {
