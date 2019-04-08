@@ -90,13 +90,10 @@ export function createFormScope<S>() {
         useEffect(() => dispatch(swap(initialState)), [initialState]);
 
         const touchedAll = Object.values<boolean>(state.touched).every(v => v);
-        return useMemo(
-          () => (
-            <Ctx.Provider value={{state, dispatch}}>
-              <ConnectedComponent {...props} formState={state.formData} touched={touchedAll} errors={state.errors} />
-            </Ctx.Provider>
-          ),
-          [state.formData, touchedAll, state.errors]
+        return (
+          <Ctx.Provider value={{state, dispatch}}>
+            <ConnectedComponent {...props} formState={state.formData} touched={touchedAll} errors={state.errors} />
+          </Ctx.Provider>
         );
       };
     },
