@@ -3,7 +3,7 @@ import * as React from 'react';
 import {memo, useEffect, useState, useContext, useReducer, useCallback, useMemo, createContext} from 'react';
 import {SyntheticEvent, Dispatch, Context, ReactNode, FC} from 'react';
 
-import {FSA, swap, submitValue, changeField, sendErrors} from './actions';
+import {FSA, swap, setNewState, submitValue, changeField, sendErrors} from './actions';
 import {Store, useFormReducer} from './reducer';
 import {InputProtocol} from './inputProtocol';
 
@@ -41,6 +41,7 @@ type FieldProps<S, Name extends keyof S, ComponentProps> = {
    * Props to delegate to the input component.
    * @example
    * ```
+   *
    * componentProps={{disabled: props.formState.age >= 20}}
    * component={AlcoholCheckbox}
    * ```
@@ -55,6 +56,7 @@ type MayoigaProps<S> = {
   onSubmit(hasErrors: boolean, value: S, formInfo: {errors: Store<S>['errors']; touched: boolean}): void;
 };
 
+/** @obsolete */
 type ScopedComponentProps<S> = {
   touched: boolean;
   errors: Store<S>['errors'];
@@ -67,6 +69,7 @@ type ScopedComponentProps<S> = {
  *
  * @example
  * ```
+ *
  * type FormState = {name: '', age: 0};
  * const {context, scope} = createFormScope<FormState>();
  *
@@ -106,6 +109,7 @@ export function createFormScope<S>() {
  *
  * @example
  * ```
+ *
  * const TheForm = scope(props => {
  *   const {Form, Field} = useForm(context);
  *   return (
@@ -114,6 +118,17 @@ export function createFormScope<S>() {
  *       <Field name="fieldNameHaven'tDefined" <= you will see compile error if you were specified the name haven't declared in the context type for initialState.
  *     </Form>
  *   );
+ * ```
+ *
+ * You can get current form state and also change it:
+ *
+ * ```
+ * const {Form, Field, useFormState} = useForm(context);
+ * const [{ errors, formData }, setFormState] = useFormState();
+ * ...
+ *   onChange={(name, value) => {
+ *      if (value) setFormState({otherFieldValue: ''});
+ *   }}
  * ```
  */
 export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
@@ -136,6 +151,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
           </form>
         );
       }),
+
       Field: <Name extends Extract<keyof S, string>, ComponentProps = undefined>(props: FieldProps<S, Name, ComponentProps>) => {
         const {state, dispatch} = useContext(formScope);
         const {component, name, validations, onChange} = props;
@@ -177,6 +193,11 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
             delegatedProps={props.componentProps!}
           />
         );
+      },
+
+      useFormState(): [Store<S>, (newState: Partial<S>) => void] {
+        const {state, dispatch} = useContext(formScope);
+        return [state, (newState: Partial<S>) => dispatch(setNewState(newState))];
       },
     }),
     [formScope]

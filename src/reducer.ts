@@ -46,6 +46,15 @@ export const useFormReducer = <S>(
         case 'SWAP': {
           return createFormInitialState(action.payload);
         }
+        case 'SET_STATE': {
+          return {
+            ...state,
+            formData: {
+              ...state.formData,
+              ...action.payload,
+            },
+          };
+        }
         case 'CHANGE': {
           const {name, value} = action.payload;
           return {
