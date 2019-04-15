@@ -863,28 +863,3 @@ input[type=checkbox]:checked + .tsd-widget:before { background-position: -160px 
   .tsd-select .tsd-select-label:before { background-position: -280px 0; } }
 
 img { max-width: 100%; }
-
-/* MyOverride */
-.tsd-typography li {
-    padding: 4px 0 !important;
-}
-
-.tsd-navigation li {
-    padding: 4px 0 !important;
-}
-
-.tsd-index-panel ul.tsd-index-list li {
-    padding: 2px 0 !important;
-}
-
-body {
-    color: #444;
-}
-
-.tsd-navigation a {
-    color: #0c418e;
-}
-
-.tsd-type-parameters-title, ul.tsd-descriptions ul + h4 {
-    margin-top: 28px !important;
-}
