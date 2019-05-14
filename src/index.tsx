@@ -1,4 +1,4 @@
-import {useForm, createFormScope} from './mayoiga';
+import {useForm, useFormState, createFormScope} from './mayoiga';
 import {InputProtocol} from './inputProtocol';
 
-export {useForm, createFormScope, InputProtocol};
+export {useForm, useFormState, createFormScope, InputProtocol};

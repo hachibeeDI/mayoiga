@@ -119,17 +119,6 @@ export function createFormScope<S>() {
  *     </Form>
  *   );
  * ```
- *
- * You can get current form state and also change it:
- *
- * ```
- * const {Form, Field, useFormState} = useForm(context);
- * const [{ errors, formData }, setFormState] = useFormState();
- * ...
- *   onChange={(name, value) => {
- *      if (value) setFormState({otherFieldValue: ''});
- *   }}
- * ```
  */
 export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
   return useMemo(
@@ -202,4 +191,20 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
     }),
     [formScope]
   );
+}
+
+/**
+ * You can get current form state and also change it:
+ *
+ * ```
+ * const [{ errors, formData }, setFormState] = useFormState(context);
+ * ...
+ *   onChange={(name, value) => {
+ *      if (value) setFormState({otherFieldValue: ''});
+ *   }}
+ * ```
+ */
+export function useFormState<S>(formScope: Context<MayoigaContextValue<S>>): [Store<S>, (newState: Partial<S>) => void] {
+  const {state, dispatch} = useContext(formScope);
+  return [state, (newState: Partial<S>) => dispatch(setNewState(newState))];
 }

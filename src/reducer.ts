@@ -42,6 +42,8 @@ export const useFormReducer = <S>(
 ) =>
   useReducer(
     (state: Store<S>, action: FSA<S>) => {
+      // TODO: logging functionality
+      // console.log(action);
       switch (action.type) {
         case 'SWAP': {
           return createFormInitialState(action.payload);

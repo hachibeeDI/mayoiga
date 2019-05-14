@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {FC, SyntheticEvent, useCallback, useMemo} from 'react';
 
-import {useForm, createFormScope} from '../../src/';
+import {useForm, useFormState, createFormScope} from '../../src/';
 import {InputProtocol} from '../../src/InputProtocol';
 import {Input, NumberInput, MappedRadioFactory, MappedSelectFactory} from '../../src/forms';
 
@@ -56,7 +56,8 @@ const LooksChoice = MappedSelectFactory([
 
 const DemoForm = scope(props => {
   const {Form, Field} = useForm(context);
-  const {touched, errors} = props;
+  // const {touched, errors} = props;
+  const [store] = useFormState(context);
   return (
     <Form onSubmit={value => console.log(value)}>
       <div style={{margin: '16px auto'}}>
@@ -72,7 +73,7 @@ const DemoForm = scope(props => {
         <Field name="looks" component={LooksChoice} validations={[required, validateLooks]} />
       </div>
 
-      <button disabled={Object.values(errors).some(e => !!e.length)}>submit</button>
+      <button disabled={Object.values(store.errors).some(e => !!e.length)}>submit</button>
     </Form>
   );
 });
