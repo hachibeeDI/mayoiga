@@ -156,15 +156,12 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         const {state, dispatch} = useContext(formScope);
         const {component, name, validations, onChange} = props;
 
-        const validate = useCallback(
-          target => {
-            if (validations !== undefined) {
-              const errors = validations.map(v => v(target, state.formData)).filter((result): result is string => !!result);
-              dispatch(sendErrors(name, errors.length === 0 ? EMPTY_ERRORS : errors));
-            }
-          },
-          [validations]
-        );
+        const validate = (target: S[Name]) => {
+          if (validations !== undefined) {
+            const errors = validations.map(v => v(target, state.formData)).filter((result): result is string => !!result);
+            dispatch(sendErrors(name, errors.length === 0 ? [] : errors));
+          }
+        };
 
         const handleChange = useCallback(
           (name: Name, value: S[Name]) => {
@@ -180,7 +177,10 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
         const value = state.formData[name];
         const errors = state.errors[name];
         const touched = state.touched[name];
-        useEffect(() => validate(value), [state.formData]);
+        useEffect(() => {
+          // I'm not exactly sure why but we need it to accomplish dispatch action on mounted. :(
+          window.requestAnimationFrame(() => validate(value));
+        }, [state.formData]);
 
         const Component = component;
         return (
