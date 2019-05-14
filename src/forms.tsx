@@ -13,7 +13,7 @@ import {InputProtocol} from './inputProtocol';
 // TODO: mapStateToValue (val: S[Name]) => string
 export function MappedInputFactory(mapInputToState: (val: string) => any = val => val /** FIXME: fmmmmmm */) {
   return <S, Name extends keyof S>(props: InputProtocol<S, Name, undefined>) => {
-    const {name, value, onChange, errors, touched, ...restProps} = props;
+    const {name, value, onChange, errors, touched, delegatedProps = {}, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLInputElement>) => {
         const value = e.currentTarget.value;
@@ -23,7 +23,7 @@ export function MappedInputFactory(mapInputToState: (val: string) => any = val =
     );
     return (
       <>
-        <input {...restProps} value={value.toString()} name={name as string} onChange={handleChange} />
+        <input {...restProps} {...delegatedProps} value={value ? value.toString() : ''} name={name as string} onChange={handleChange} />
         {touched && errors.length !== 0 && <div style={{color: 'red'}}>{errors[0]}</div>}
       </>
     );
@@ -39,7 +39,7 @@ export function MappedRadioFactory(
   mapInputToState: (val: string) => any = val => val
 ) {
   return <S, Name extends keyof S>(props: InputProtocol<S, Name, undefined>) => {
-    const {name, onChange, errors, touched, ...restProps} = props;
+    const {name, onChange, errors, touched, delegatedProps = {}, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLInputElement>) => {
         const value = e.currentTarget.value;
@@ -53,6 +53,7 @@ export function MappedRadioFactory(
           <label key={value}>
             <input
               {...restProps}
+              {...delegatedProps}
               type="radio"
               name={name as string}
               value={value}
@@ -73,7 +74,7 @@ export function MappedSelectFactory(
   mapInputToState: (val: string) => any = val => val
 ) {
   return <S, Name extends keyof S>(props: InputProtocol<S, Name, undefined>) => {
-    const {value, name, onChange, errors, touched, ...restProps} = props;
+    const {value, name, onChange, errors, touched, delegatedProps = {}, ...restProps} = props;
     const handleChange = useCallback(
       (e: SyntheticEvent<HTMLSelectElement>) => {
         const value = e.currentTarget.value;
@@ -83,8 +84,8 @@ export function MappedSelectFactory(
     );
     return (
       <>
-        <select {...restProps} name={name as string} value={value.toString()} onChange={handleChange}>
-          <option selected={!value} disabled={true}>
+        <select {...restProps} {...delegatedProps} name={name as string} value={value ? value.toString() : ''} onChange={handleChange}>
+          <option value="" disabled={true}>
             Please select
           </option>
           {options.map(({label, value, disabled}) => (
