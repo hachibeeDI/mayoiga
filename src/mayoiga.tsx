@@ -175,7 +175,8 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
           window.requestAnimationFrame(() => validate(value));
         }, [state.formData]);
 
-        const Component = component;
+        // cache component for performance
+        const Component = useMemo(() => component, [name]);
         return (
           <Component
             name={name}
