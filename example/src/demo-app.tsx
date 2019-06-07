@@ -2,11 +2,13 @@ import * as React from 'react';
 import {FC, SyntheticEvent, useCallback, useMemo} from 'react';
 
 import {useForm, useFormState, createFormScope} from '../../src/';
-import {InputProtocol} from '../../src/InputProtocol';
+import {InputProtocol} from '../../src/inputProtocol';
 import {Input, NumberInput, MappedRadioFactory, MappedSelectFactory} from '../../src/forms';
 
 type FormState = {
+  freeSpace: string;
   name: string;
+  height: number;
   age: number;
   race: 'squid' | 'octopus' | 'jellyfish';
   looks: null | 'unknown' | 'boy' | 'girl';
@@ -27,14 +29,16 @@ const choice = function<T>(...candidates: Array<T>) {
   return (target: T) => (candidates.includes(target) ? undefined : 'You should choose from the candidates.');
 };
 
-const validateLooks = (value: string, record: FormState) => {
+const validateLooks = (value: any, record: FormState) => {
   if (record.race === 'jellyfish') {
-    return value === 'unknown' ? null : 'It should be unknown';
+    return value === 'unknown' ? undefined : 'It should be unknown';
   }
 };
 
 const INITIAL_FORM_STATE: FormState = {
+  freeSpace: '',
   name: '',
+  height: 130,
   age: 13,
   race: 'jellyfish',
   looks: null,
@@ -61,16 +65,39 @@ const DemoForm = scope(props => {
   return (
     <Form onSubmit={value => console.log(value)}>
       <div style={{margin: '16px auto'}}>
-        <Field name="name" component={Input as FC<InputProtocol<FormState, 'name'>>} validations={[required]} />
+        <Field name="name" component={props => <Input<FormState, 'name'> {...props} />} validations={[required]} />
       </div>
       <div style={{margin: '16px auto'}}>
-        <Field name="age" component={NumberInput} validations={[between(5, 20)]} />
+        <Field
+          name="height"
+          component={props => (
+            <div>
+              <input value={props.value.toString()} onChange={e => props.onChange(props.name, parseInt(e.target.value, 10) || 0)} />
+              <div style={{color: 'red'}}>{props.errors[0]}</div>
+            </div>
+          )}
+          validations={[between(30, 250)]}
+        />
       </div>
       <div style={{margin: '16px auto'}}>
-        <Field name="race" component={RaceChoice} validations={[choice('jellyfish', 'squid', 'octopus')]} />
+        <Field name="age" component={props => <NumberInput<FormState, 'age'> {...props} />} validations={[between(5, 20)]} />
       </div>
       <div style={{margin: '16px auto'}}>
-        <Field name="looks" component={LooksChoice} validations={[required, validateLooks]} />
+        <Field
+          name="race"
+          component={props => <RaceChoice<FormState, 'race'> {...props} />}
+          validations={[choice('jellyfish', 'squid', 'octopus')]}
+        />
+      </div>
+      <div style={{margin: '16px auto'}}>
+        <Field name="looks" component={props => <LooksChoice<FormState, 'looks'> {...props} />} validations={[required, validateLooks]} />
+      </div>
+      <div style={{margin: '16px auto'}}>
+        <Field
+          name="freeSpace"
+          component={props => <textarea value={props.value} onChange={e => props.onChange(props.name, e.target.value)} />}
+          validations={[required]}
+        />
       </div>
 
       <button disabled={Object.values(store.errors).some(e => !!e.length)}>submit</button>
