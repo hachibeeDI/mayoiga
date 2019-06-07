@@ -24,6 +24,7 @@ type MayoigaContextValue<S> = {
 type Validator<S, Name extends keyof S> = (target: S[Name], record: S) => undefined | string;
 
 type FormProps<S> = {
+  className?: string;
   onSubmit?(value: S): void;
   // TODO: should support onChange handler and effect on Form level?
   // onChange?(value: S, action: ACT): void;
@@ -114,20 +115,23 @@ export function createFormScope<S>() {
  *   const {Form, Field} = useForm(context);
  *   return (
  *     <Form>
- *       <Field name="name" component={Input} validations={[required]} />
+ *       <Field name="name" component={props => <input value={props.value.toString()} />} validations={[required]} />
  *       <Field name="fieldNameHaven'tDefined" <= you will see compile error if you were specified the name haven't declared in the context type for initialState.
  *     </Form>
  *   );
  * ```
+ *
+ * You should be aware, `component` props for <Field /> is going to be cached at the first render. So it should be same pure function.
  */
 export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
   return useMemo(
     () => ({
       Form: memo((props: FormProps<S>) => {
         const {state, dispatch} = useContext(formScope);
-        const {onSubmit} = props;
+        const {className, onSubmit} = props;
         return (
           <form
+            className={className}
             onSubmit={e => {
               e.preventDefault();
               if (onSubmit) {
