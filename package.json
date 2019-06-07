@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc example/src/demo-app.tsx --noEmit --jsx preserve",
     "clean": "rm -rf lib/",
     "docs": "typedoc --name Mayoiga --mode modules --excludePrivate --out docs/",
     "compile": "tsc",
