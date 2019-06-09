@@ -23,7 +23,18 @@ export function MappedInputFactory(mapInputToState: (val: string) => any = val =
     );
     return (
       <>
-        <input {...restProps} {...delegatedProps} value={value ? value.toString() : ''} name={name as string} onChange={handleChange} />
+        <input
+          {...restProps}
+          {...delegatedProps}
+          value={
+            value
+              ? (value as any) /** FIXME: TS 3.5.1 changes defualt infer is unknown */
+                  .toString()
+              : ''
+          }
+          name={name as string}
+          onChange={handleChange}
+        />
         {touched && errors.length !== 0 && <div style={{color: 'red'}}>{errors[0]}</div>}
       </>
     );
@@ -84,7 +95,18 @@ export function MappedSelectFactory(
     );
     return (
       <>
-        <select {...restProps} {...delegatedProps} name={name as string} value={value ? value.toString() : ''} onChange={handleChange}>
+        <select
+          {...restProps}
+          {...delegatedProps}
+          name={name as string}
+          value={
+            value
+              ? (value as any) /** TS 3.5.1 changes defualt infer is unknown */
+                  .toString()
+              : ''
+          }
+          onChange={handleChange}
+        >
           <option value="" disabled={true}>
             Please select
           </option>
