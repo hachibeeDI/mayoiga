@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc example/src/demo-app.tsx --noEmit --jsx preserve",
     "clean": "rm -rf lib/",
     "docs": "typedoc --name Mayoiga --mode modules --excludePrivate --out docs/",
     "compile": "tsc",
@@ -33,34 +33,38 @@
   },
   "homepage": "https://github.com/hachibeeDI/mayoiga#readme",
   "devDependencies": {
-    "@babel/cli": "^7.2.3",
-    "@babel/core": "^7.4.0",
-    "@babel/plugin-proposal-class-properties": "^7.4.0",
-    "@babel/plugin-proposal-object-rest-spread": "^7.4.0",
-    "@babel/preset-env": "^7.4.1",
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.4.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.4.4",
+    "@babel/preset-env": "^7.4.5",
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.3.3",
     "@types/node": "^11.11.4",
-    "@types/react": "^16.8.8",
+    "@types/react": "^16.8.19",
     "@types/react-dom": "^16.8.2",
-    "babel-loader": "^8.0.5",
-    "prettier": "^1.16.4",
+    "babel-loader": "^8.0.6",
+    "prettier": "^1.18.2",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "tslint": "^5.14.0",
     "tslint-config-prettier": "^1.18.0",
-    "tslint-immutable": "^5.5.1",
+    "tslint-immutable": "^6.0.0",
     "tslint-plugin-prettier": "^2.0.1",
-    "tslint-react": "^3.6.0",
+    "tslint-react": "^4.0.0",
     "typedoc": "^0.14.2",
     "typescript": "^3.3.4000",
     "typescript-eslint-parser": "^22.0.0",
     "webpack": "^4.29.6",
-    "webpack-cli": "^3.3.0",
-    "webpack-dev-server": "^3.2.1"
+    "webpack-cli": "^3.3.3",
+    "webpack-dev-server": "^3.7.1"
   },
   "peerDependencies": {
-    "react": "^16.8.4"
+    "react": "^16.8.0"
+  },
+
+  "resolutions": {
+    "@types/react": "^16.8.19"
   },
   "dependencies": {}
 }
