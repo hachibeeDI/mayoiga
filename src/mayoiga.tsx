@@ -147,7 +147,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
 
       Field: <Name extends Extract<keyof S, string>, ComponentProps = undefined>(props: FieldProps<S, Name, ComponentProps>) => {
         const {state, dispatch} = useContext(formScope);
-        const {component, name, validations, onChange} = props;
+        const {component, name, validations, componentProps, onChange} = props;
 
         const validate = (target: S[Name]) => {
           if (validations !== undefined) {
@@ -164,7 +164,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
             }
             validate(value);
           },
-          [name, state]
+          [name, state, componentProps]
         );
 
         const value = state.formData[name];
@@ -184,7 +184,7 @@ export function useForm<S>(formScope: Context<MayoigaContextValue<S>>) {
             onChange={handleChange}
             errors={errors}
             touched={touched}
-            delegatedProps={props.componentProps!}
+            delegatedProps={componentProps!}
           />
         );
       },
