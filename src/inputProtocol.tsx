@@ -1,6 +1,4 @@
-import * as React from 'react';
-
-import {useCallback, InputHTMLAttributes, SyntheticEvent} from 'react';
+import {InputHTMLAttributes} from 'react';
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 
