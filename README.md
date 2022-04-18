@@ -1,3 +1,5 @@
+[![Lint Check](https://github.com/hachibeeDI/mayoiga/actions/workflows/checker.yml/badge.svg)](https://github.com/hachibeeDI/mayoiga/actions/workflows/checker.yml)
+
 # Mayoiga
 
 The React Hook based form library. Of course it is TypeScript friendly.
