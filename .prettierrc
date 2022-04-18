@@ -1,5 +1,5 @@
 printWidth: 140
 parser: typescript
 bracketSpacing: false
-trailingComma: es5
+trailingComma: all
 singleQuote: true
