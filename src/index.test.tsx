@@ -89,7 +89,7 @@ test('zod parse value before submit', async () => {
       if (result.success) {
         expect(result.data.age).toBe(PARSED_RESULT);
       } else {
-        expect('should not called').toBe(result.err);
+        expect('should not called').toBe(result.error);
       }
     });
 

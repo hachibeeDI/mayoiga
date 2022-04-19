@@ -5,7 +5,6 @@ import type {infer as zodInfer, SafeParseReturnType, ZodIssue, ZodType} from 'zo
 import {createStore} from 'nozuchi';
 import type {Subscriber} from 'nozuchi';
 
-
 export type StateRestriction = Record<string, any>;
 
 type FormStatus = {
@@ -28,13 +27,27 @@ type SliceProps<State extends StateRestriction, R extends ReadonlyArray<unknown>
 
 type FormControllerBehavior<StateBeforeValidation> = {
   /** For testing */
-  peek: (eyeball: (prev: FullFormState<StateBeforeValidation>) => void) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
+  peek: (
+    eyeball: (prev: FullFormState<StateBeforeValidation>) => void,
+  ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
 
   reset: () => () => FullFormState<StateBeforeValidation>;
-  init: (
+
+  /**
+   * Initialize form state without validation.
+   */
+  initializeForm: (
     initialVal: Partial<StateBeforeValidation>,
   ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
+
   handleIssues: (issues: ReadonlyArray<ZodIssue>) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
+
+  /**
+   * You can handle server side or other external error via this action.
+   */
+  handleError: (
+    reducer: (prev: FormErrors<StateBeforeValidation>) => FormErrors<StateBeforeValidation>,
+  ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
   handleChange: <Name extends keyof StateBeforeValidation>(
     name: Name,
     value: StateBeforeValidation[Name],
@@ -95,7 +108,7 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
     },
 
     reset: () => () => fullInitialState,
-    init: (initialVal) => (prev) => ({
+    initializeForm: (initialVal) => (prev) => ({
       ...prev,
       value: {...prev.value, ...initialVal},
       errors: {...initialErrors},
@@ -112,6 +125,9 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
       }, {} as any as Err);
 
       return {...prev, isDirty: true, isValid: false, errors: newErrors};
+    },
+    handleError: (reducer) => (prev) => {
+      return {...prev, errors: reducer(prev.errors)};
     },
     handleChange:
       <Name extends keyof StateBeforeValidation>(name: Name, value: StateBeforeValidation[Name]) =>
@@ -177,17 +193,23 @@ export function createFormHook<StateBeforeValidation, Schema extends ZodType<any
     return useMemo(() => children({handleChange: store.actions.handleChange}, ...value), value);
   }
 
-  const handleSubmit = (handler: (e: BaseSyntheticEvent) => (val: {success: true, data: zodInfer<Schema>} | {success: false, err: readonly ZodIssue[]}) => void | Promise<void>) => {
+  const handleSubmit = (
+    handler: (
+      e: BaseSyntheticEvent,
+    ) => (
+      val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>},
+    ) => void | Promise<void>,
+  ) => {
     return (e: BaseSyntheticEvent) => {
       const eventHandled = handler(e);
       const value = store.getState().value;
       return schema.safeParseAsync(value).then((result: SafeParseReturnType<StateBeforeValidation, zodInfer<typeof schema>>) => {
+        // FIXME: hook formを捨ててzodのバージョンをあげればこの辺に型をつけられる
         if (result.success) {
-          // FIXME: why zod does not provide a type info?
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          return eventHandled({success: true, data: result.data});
+          return eventHandled({success: true, data: result.data, error: undefined});
         }
-        eventHandled({success: false, err: result.error.issues});
+        void eventHandled({success: false, error: result.error.issues});
         store.actions.handleIssues(result.error.issues);
       });
     };
@@ -197,7 +219,7 @@ export function createFormHook<StateBeforeValidation, Schema extends ZodType<any
     controller: store as Controller<StateBeforeValidation>,
     useInitialize: (initialValue: Partial<StateBeforeValidation>) => {
       useEffect(() => {
-        store.actions.init(initialValue);
+        store.actions.initializeForm(initialValue);
       }, []);
     },
     useSelector: store.useSelector,
