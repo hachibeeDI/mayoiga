@@ -1,7 +1,7 @@
-import type {ChangeEvent} from 'react';
 import {useMemo} from 'react';
 
 import type {StateRestriction, HandleChangeAction, Controller, FullFormState} from './index';
+import type {ChangeEvent} from 'react';
 
 type SlicerProps<State extends StateRestriction, R extends ReadonlyArray<unknown>, Children> = {
   controller: Controller<State>;

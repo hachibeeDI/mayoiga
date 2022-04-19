@@ -1,15 +1,13 @@
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 
 import {test, expect, afterEach} from 'vitest';
 
+import * as zod from 'zod';
+
 import {createFormHook} from './index'; 
 
-import * as zod from 'zod';
-import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-
-// TODO: setupfile
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 const testSchema = zod.object({
   name: zod.string(),
@@ -67,14 +65,14 @@ test('useSelector can select the fields', async () => {
   const INPUT_AGE = '4';
 
   act(() => {
-    fireEvent.change(screen.getByTestId('age-input') as HTMLInputElement, {target: {value: INPUT_AGE}})
+    fireEvent.change(screen.getByTestId('age-input') , {target: {value: INPUT_AGE}})
     // calling `userEvent` in here will cause race condition...
     // userEvent.type(ageInput, INPUT_AGE);
     // TestFormHook.actions.handleBulkChange(prev => ({...prev, name: 'test', description: 'desc'}));
   });
 
-  await waitFor(async () => {
-    const ageInput = screen.getByTestId('age-input') as HTMLInputElement;
+  await waitFor(() => {
+    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
     expect(ageInput.value).toBe(INPUT_AGE);
   });
 });
@@ -106,14 +104,14 @@ test('zod parse value before submit', async () => {
     render(<Top />);
   });
 
-  act(() => {
-    const ageInput = screen.getByTestId('age-input') as HTMLInputElement;
-    userEvent.type(ageInput, INPUT_AGE);
+  await act(() => {
+    const ageInput: HTMLInputElement  = screen.getByTestId('age-input') ;
+    return userEvent.type(ageInput, INPUT_AGE);
     // TestFormHook.actions.handleBulkChange(prev => ({...prev, name: 'test', description: 'desc'}));
   });
 
-  await waitFor(async () => {
-    const ageInput = screen.getByTestId('age-input') as HTMLInputElement;
+  await waitFor(() => {
+    const ageInput: HTMLInputElement = screen.getByTestId('age-input') ;
     expect(ageInput.value).toBe(INPUT_AGE);
   });
 
@@ -122,7 +120,7 @@ test('zod parse value before submit', async () => {
     fireEvent.click(submitButton);
   })
 
-  await waitFor(async () => {
+  await waitFor(() => {
     console.log('waiting');
     TestFormHook.actions.peek((s) => {
       expect(s.value.age).toBe(INPUT_AGE);
