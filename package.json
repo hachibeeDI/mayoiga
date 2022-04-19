@@ -12,7 +12,8 @@
     "test": "vitest run",
     "prebuild": "npm run clean",
     "build": "tsc",
-    "check-all": "npm run build --noEmit && npm run test",
+    "check:style": "prettier --check 'src/**/*.{js,ts}'",
+    "check-all": "npm run check:style && npm run build --noEmit && npm run test",
     "prepublish": "npm run check-all && npm run build"
   },
   "repository": {
