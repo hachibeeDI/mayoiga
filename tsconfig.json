@@ -3,7 +3,7 @@
     "target": "esnext",
     "module": "esnext",
     "declaration": true,
-    "jsx": "preserve",
+    "jsx": "react",
     "moduleResolution": "node",
     // TODO: skip while vitest is broken
     "skipLibCheck": true,

@@ -6,13 +6,16 @@ import {test, expect, afterEach} from 'vitest';
 
 import * as zod from 'zod';
 
-import {createFormHook} from './index'; 
+import {createFormHook, useFormSlice} from './index';
+ 
+import type {Controller} from './index';
 
 
 const testSchema = zod.object({
   name: zod.string(),
   description: zod.string(),
   age: zod.string().transform(val => Number(val)).refine(val => Number.isNaN(val) ? 0 : val),
+  marked: zod.boolean(),
 });
 
 // every fields are optional for test
@@ -20,15 +23,14 @@ type FormStateBeforeValidation = {
   name: string;
   description: string;
   age: string;
+  marked: boolean;
 }
 
-const createTestHook =  () => createFormHook({name:'', description: '', age: ''} as FormStateBeforeValidation, testSchema);
+const createTestHook =  () => createFormHook({name:'', description: '', age: '', marked: false} as FormStateBeforeValidation, testSchema);
 
-type TestHook = ReturnType<typeof createTestHook>;
-
-const AgeInputComponent = (props: {formHook: TestHook}) => {
-  const {formHook} = props;
-  const [age, errorMessage] = formHook.useSelector(s => [s.value.age, s.errors.age] as const);
+const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidation>}) => {
+  const {controller} = props;
+  const [[age, errorMessage], {handleChange}] = useFormSlice(controller, s => [s.value.age, s.errors.age] as const);
   return (
     <div>
       <input
@@ -36,8 +38,7 @@ const AgeInputComponent = (props: {formHook: TestHook}) => {
         value={age}
         name="age"
         onChange={(e) => {
-          console.log('input: ', e.currentTarget.value);
-          formHook.actions.handleChange('age' as const, e.currentTarget.value);
+          handleChange('age' as const, e.currentTarget.value);
         }}
       />
       <span data-testid="age-error">{errorMessage}</span>
@@ -53,7 +54,7 @@ test('useSelector can select the fields', async () => {
   const Top = () => {
     return (
       <div>
-        <AgeInputComponent formHook={TestFormHook} />
+        <AgeInputComponent controller={TestFormHook.controller} />
       </div>
     )
   };
@@ -94,7 +95,7 @@ test('zod parse value before submit', async () => {
   const Top = () => {
     return (
       <div>
-        <AgeInputComponent formHook={TestFormHook} />
+        <AgeInputComponent controller={TestFormHook} />
         <button data-testid="submit-button" onClick={handleSubmitTester} />
       </div>
     )
@@ -122,7 +123,7 @@ test('zod parse value before submit', async () => {
 
   await waitFor(() => {
     console.log('waiting');
-    TestFormHook.actions.peek((s) => {
+    TestFormHook.api.actions.peek((s) => {
       expect(s.value.age).toBe(INPUT_AGE);
       expect(s.errors.age).toBeNull();
     });

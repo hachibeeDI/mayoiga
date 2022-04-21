@@ -15,6 +15,7 @@
     "check:style": "prettier --check 'src/**/*.{js,ts}'",
     "check:lint": "eslint 'src/**/*.{ts,tsx}'",
     "check-all": "npm run check:style && npm run check:lint && npm run build --noEmit && npm run test",
+    "fix-all": "npm run check:style --write && npm run check:lint --fix",
     "prepublish": "npm run check-all && npm run build"
   },
   "repository": {

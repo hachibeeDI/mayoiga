@@ -28,8 +28,9 @@ export type FieldProps<State extends StateRestriction, Name extends keyof State>
   children: (
     tool: {
       name: Name;
-      onChange(name: Name, value: State[Name]): void;
-      onChange(e: ChangeEvent<HTMLElement>): void;
+      value: State[Name],
+      onChange(this: void, name: Name, value: State[Name]): void;
+      onChange(this: void, e: ChangeEvent<HTMLElement>): void;
     },
     value: State[Name],
     errorMessage: string | null,
@@ -38,7 +39,7 @@ export type FieldProps<State extends StateRestriction, Name extends keyof State>
 
 export type SliceProps<State extends StateRestriction, Selected extends ReadonlyArray<unknown>> = {
   selector: (s: FullFormState<State>) => Selected;
-  children: (tool: {handleChange: HandleChangeAction<State>}, ...value: Selected) => ReactNode;
+  children: (tool: {handleChange: HandleChangeAction<State>}, ...value: Readonly<Selected>) => ReactNode;
 };
 
 type FormControllerBehavior<StateBeforeValidation> = {
@@ -200,6 +201,8 @@ type FormHook<State extends StateRestriction, Schema extends ZodType<any, any, a
       val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>},
     ) => void | Promise<void>,
   ) => (e: BaseSyntheticEvent) => void;
+
+  api: Subscriber<FullFormState<State>, FormControllerBehavior<State>>;
 } & Controller<State>;
 
 /**
@@ -256,6 +259,7 @@ export function createFormHook<StateBeforeValidation, Schema extends ZodType<any
           const renderContent = children(
             {
               name,
+              value,
               onChange: (name_or_event: unknown, value_or_none?: unknown) => {
                 if (typeof name_or_event === 'string') {
                   // assumes name is valid if it's string
@@ -267,7 +271,7 @@ export function createFormHook<StateBeforeValidation, Schema extends ZodType<any
                   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
                   return store.actions.handleChange(target.name, target.value);
                 }
-                return;
+                throw new Error('`handleChange` handles unexpected formed object.')
               },
             },
             value,
@@ -282,6 +286,7 @@ export function createFormHook<StateBeforeValidation, Schema extends ZodType<any
 
   return {
     controller: formHook,
+    api: store,
     ...formHook,
   };
 }
