@@ -172,8 +172,11 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
 }
 
 type ActionsCanBePublic<State extends StateRestriction> = {
+  reset: VoidFunction;
+  initializeForm: (initial: Partial<State>) => void;
   handleChange: HandleChangeAction<State>;
   handleBulkChange: (setter: (prev: State) => Partial<State>) => void;
+  handleError: (reducer: (prev: FormErrors<State>) => FormErrors<State>) => void;
 };
 
 /**
