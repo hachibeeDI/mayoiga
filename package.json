@@ -1,6 +1,6 @@
 {
   "name": "mayoiga",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Type safe hook based form library for React",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,10 +15,11 @@
     "test": "vitest run",
     "prebuild": "npm run clean",
     "build": "tsc",
-    "check:style": "prettier --check 'src/**/*.{js,ts}'",
+    "check:type": "tsc --noEmit",
+    "check:style": "prettier --check 'src/**/*.{js,ts,jsx,tsx}'",
     "check:lint": "eslint 'src/**/*.{ts,tsx}'",
-    "check-all": "npm run check:style && npm run check:lint && npm run build --noEmit && npm run test",
-    "fix-all": "npm run check:style --write && npm run check:lint --fix",
+    "check-all": "npm run check:type && npm run check:style && npm run check:lint && npm run build --noEmit && npm run test",
+    "fix-all": "npm run check:style -- --write && npm run check:lint -- --fix",
     "prepublish": "npm run check-all && npm run build"
   },
   "repository": {

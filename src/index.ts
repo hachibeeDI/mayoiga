@@ -65,7 +65,11 @@ type FormControllerBehavior<StateBeforeValidation> = {
   /**
    * You can handle server side or other external error via this action.
    */
-  handleError: (
+  pushFormErrors: (
+    validator: (state: StateBeforeValidation) => Partial<FormErrors<StateBeforeValidation>>,
+  ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
+
+  reduceFormErrors: (
     reducer: (prev: FormErrors<StateBeforeValidation>) => FormErrors<StateBeforeValidation>,
   ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
 
@@ -150,7 +154,11 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
 
       return {...prev, isDirty: true, isValid: false, errors: newErrors};
     },
-    handleError: (reducer) => (prev) => {
+    pushFormErrors: (validator) => (prev) => {
+      const pushedErrors = validator(prev.value);
+      return {...prev, errors: {...prev.errors, ...pushedErrors}};
+    },
+    reduceFormErrors: (reducer) => (prev) => {
       return {...prev, errors: reducer(prev.errors)};
     },
     handleChange: (name, value) => (prev) => {
@@ -174,9 +182,9 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
 type ActionsCanBePublic<State extends StateRestriction> = {
   reset: VoidFunction;
   initializeForm: (initial: Partial<State>) => void;
+  pushFormErrors: (validator: (state: State) => Partial<FormErrors<State>>) => void;
   handleChange: HandleChangeAction<State>;
   handleBulkChange: (setter: (prev: State) => Partial<State>) => void;
-  handleError: (reducer: (prev: FormErrors<State>) => FormErrors<State>) => void;
 };
 
 /**
