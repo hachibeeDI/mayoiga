@@ -1,9 +1,9 @@
 
-import {act, cleanup, render, screen, waitFor} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-import {test, expect, afterEach} from 'vitest';
+import {test, expect} from 'vitest';
 
 import * as zod from 'zod';
 
@@ -28,7 +28,7 @@ type FormStateBeforeValidation = {
 
 const createTestHook =  () => createFormHook({name:'', description: '', age: '', marked: false} as FormStateBeforeValidation, testSchema);
 
-afterEach(cleanup);
+// afterEach(cleanup);
 
 test('Field component works fine in basic usage.', async () => {
   const TestFormHook = createTestHook();
@@ -43,16 +43,12 @@ test('Field component works fine in basic usage.', async () => {
     )
   };
 
-  act(() => {
-    render(<Top />);
-  });
+  render(<Top />);
 
   const INPUT_AGE = '42';
 
-  await act(() => {
-    // calling `userEvent` in here will cause race condition...
-    return userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
-  });
+  // calling `userEvent` in here will cause race condition...
+  await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
   await waitFor(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
@@ -77,16 +73,12 @@ test('Slice component works fine in basic usage.', async () => {
     )
   };
 
-  act(() => {
-    render(<Top />);
-  });
+  render(<Top />);
 
   const INPUT_AGE = '42';
 
-  await act(() => {
-    // calling `userEvent` in here will cause race condition...
-    return userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
-  });
+  // calling `userEvent` in here will cause race condition...
+  await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
   await waitFor(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');

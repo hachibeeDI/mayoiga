@@ -1,8 +1,8 @@
-import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-import {test, expect, afterEach} from 'vitest';
+import {test, expect} from 'vitest';
 
 import * as zod from 'zod';
 
@@ -46,7 +46,7 @@ const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidat
   );
 };
 
-afterEach(cleanup);
+// afterEach(cleanup);
 
 test('useSelector can select the fields', async () => {
   const TestFormHook = createTestHook();
@@ -59,18 +59,14 @@ test('useSelector can select the fields', async () => {
     )
   };
 
-  act(() => {
-    render(<Top />);
-  });
+  render(<Top />);
 
   const INPUT_AGE = '4';
 
-  act(() => {
-    fireEvent.change(screen.getByTestId('age-input') , {target: {value: INPUT_AGE}})
-    // calling `userEvent` in here will cause race condition...
-    // userEvent.type(ageInput, INPUT_AGE);
-    // TestFormHook.actions.handleBulkChange(prev => ({...prev, name: 'test', description: 'desc'}));
-  });
+  // fireEvent.change(screen.getByTestId('age-input') , {target: {value: INPUT_AGE}})
+  // calling `userEvent` in here will cause race condition...
+  await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
+  // TestFormHook.actions.handleBulkChange(prev => ({...prev, name: 'test', description: 'desc'}));
 
   await waitFor(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
@@ -101,25 +97,18 @@ test('zod parse value before submit', async () => {
     )
   };
 
-  act(() => {
-    render(<Top />);
-  });
+  render(<Top />);
 
-  await act(() => {
-    const ageInput: HTMLInputElement  = screen.getByTestId('age-input') ;
-    return userEvent.type(ageInput, INPUT_AGE);
-    // TestFormHook.actions.handleBulkChange(prev => ({...prev, name: 'test', description: 'desc'}));
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input') ;
+  await userEvent.type(ageInput, INPUT_AGE);
 
   await waitFor(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input') ;
     expect(ageInput.value).toBe(INPUT_AGE);
   });
 
-  act(() => {
-    const submitButton = screen.getByTestId('submit-button');
-    fireEvent.click(submitButton);
-  })
+  const submitButton = screen.getByTestId('submit-button');
+  await userEvent.click(submitButton);
 
   await waitFor(() => {
     console.log('waiting');

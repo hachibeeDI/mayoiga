@@ -28,7 +28,7 @@ export type FieldProps<State extends StateRestriction, Name extends keyof State>
   children: (
     tool: {
       name: Name;
-      value: State[Name],
+      value: State[Name];
       onChange(this: void, name: Name, value: State[Name]): void;
       onChange(this: void, e: ChangeEvent<HTMLElement>): void;
     },
@@ -271,7 +271,7 @@ export function createFormHook<StateBeforeValidation, Schema extends ZodType<any
                   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
                   return store.actions.handleChange(target.name, target.value);
                 }
-                throw new Error('`handleChange` handles unexpected formed object.')
+                throw new Error('`handleChange` handles unexpected formed object.');
               },
             },
             value,
