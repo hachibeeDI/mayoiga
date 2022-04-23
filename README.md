@@ -2,59 +2,79 @@
 
 # Mayoiga
 
-The React Hook based form library. Of course it is TypeScript friendly.
+Fully typed form state management system for React.
+
+No magic, ref free. It's built for complicated form state management.
+
+## Feature
+
+Support strong typed form state.
+Every form should have two kind of types:
+
+1. form state before validation
+2. state after validation succeed
+
+i.e. before validation, a field named "bio" might be nullable (`{bio: null | string}`) but it must not empty to submit (`{bio: zod.string().nonempty()}`).
+
+Also considers:
+
+- No ref, DOM free
+- High performance, high tuning possibility
+  - Mayoiga uses "external state and selector" pattern. You can built your own form if you known what you would like to
+
+## Features does not support
+
+- Short coding
+
+It's not a library for short coding or copy and paste template.
 
 
-## Supported functionality
-
-- TypeScript oriented
-- Form level validation
-- Submit level validation
-- Less learning cost
-- Cooperate with any component library (Bootstarap, MaterialDesign, ant-design or whatever )
-
-With less boilerplate code!!
-
-
-## How to use
-
-### API you should see
-
-There are only two functions which you should know to use Mayoiga.
-
-- [useForm](https://hachibeedi.github.io/mayoiga/modules/_mayoiga_.html#useform)
-
-- [createFormScope](https://hachibeedi.github.io/mayoiga/modules/_mayoiga_.html#createformscope)
-
-
-### Minimum example:
+### Quickstart
 
 ```typeScript
 
-const TestFormHook = createFormHook({name:'', description: '', age: ''} as FormStateBeforeValidation, testSchema);
-
-const INPUT_AGE = '9';
-const PARSED_RESULT = Number(INPUT_AGE);
-
-const handleSubmitTester = TestFormHook.handleSubmit((e) => (result) => {
-  if (result.success) {
-    expect(result.data.age).toBe(PARSED_RESULT);
-  } else {
-    expect('should not called').toBe(result.err);
-  }
+const schema = zod.object({
+  name: zod.string(),
+  age: zod
+    .string()
+    .transform((val) => Number(val))
+    .refine((val) => (Number.isNaN(val) ? 0 : val)),
+  marked: zod.literal(true),
 });
 
-const Top = () => {
-  return (
-    <div>
-      <AgeInputComponent formHook={TestFormHook} />
-      <button data-testid="submit-button" onClick={handleSubmitTester} />
-    </div>
-  )
+type BeforeValidation = {
+  name: string;
+  age: string;
+  marked: boolean;
 };
 
-act(() => {
-  render(<Top />);
-});
+const {
+  components: {Field, Slicer},
+  handleSubmit,
+} = createFormHook({name:'test', age: '42', marked: false} as BeforeValidation, schema);
+
+function App() {
+  const submitHandler = handleSubmit((e) => (result) => {
+    if (result.error) {
+      return alert('Err!');
+    }
+    console.log(result.data); /*
+      {
+        name: 'test',
+        age: 42, <- age is typed "number" before validation because of definition
+        marked: true, <- have to be "true", not as boolean. it's power of zod
+      }
+    */
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <Field name="name">{(tool) => <input {...tool} />}</Field>
+      <Field name="age">{(tool) => <input {...tool} />}</Field>
+      <Field name="marked">{(tool) => <input {...tool} />}</Field>
+      <input type="submit" />
+    </form>
+  );
+}
 
 ```
