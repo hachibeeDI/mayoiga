@@ -144,3 +144,61 @@ test('A user able to create a reusable component', async () => {
     });
   });
 });
+
+test('`deps` field could destruct memoization', async () => {
+  const TestFormHook = createTestHook();
+  // intentional sample to replicate the situation
+  const OtherFormHook = createFormHook({minAge: '30'}, zod.object({minAge: zod.string()}));
+
+  const DATA_ID_RE_RENDER_BY_DEPS = 'refresh-by-deps';
+  const DATA_ID_NOT_RERENDER_NO_DEPS = 'no-refersh-no-deps';
+
+  function App() {
+    const minAge = OtherFormHook.useSelector((s) => Number(s.value.minAge));
+
+    return (
+      <div>
+        <Field controller={OtherFormHook.controller} name="minAge">
+          {(tool) => <input data-testid="minAgeInput" type="number" {...tool} />}
+        </Field>
+        <Field controller={TestFormHook.controller} name="age">
+          {(tool) => <input data-testid="ageInput" type="number" {...tool} />}
+        </Field>
+        <Slicer controller={TestFormHook.controller} selector={(s) => [Number(s.value.age)]} deps={[minAge]}>
+          {(_tool, age: number) => (
+            <div data-testid={DATA_ID_RE_RENDER_BY_DEPS}>{age >= minAge ? 'You can buy this content' : 'go home'}</div>
+          )}
+        </Slicer>
+        <Slicer controller={TestFormHook.controller} selector={(s) => [Number(s.value.age)]}>
+          {(_tool, age: number) => (
+            <div data-testid={DATA_ID_NOT_RERENDER_NO_DEPS}>{age >= minAge ? 'You can buy this content' : 'go home'}</div>
+          )}
+        </Slicer>
+      </div>
+    );
+  }
+
+  render(<App />);
+
+  await userEvent.type(screen.getByTestId('ageInput'), '16');
+
+  await waitFor(() => {
+    expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent).toBe('go home');
+    // expect(await screen.findByText('You can buy this content')).toBeDefined();
+  });
+
+  await userEvent.clear(screen.getByTestId('minAgeInput'));
+  await userEvent.type(screen.getByTestId('minAgeInput'), '10');
+
+  await waitFor(() => {
+    expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent, 'Slicer should re-execute renderProps if `deps` are changed').toBe(
+      'You can buy this content',
+    );
+  });
+  await waitFor(() => {
+    expect(
+      screen.getByTestId(DATA_ID_NOT_RERENDER_NO_DEPS).textContent,
+      'Same logic but would not refresh because external dependencies are not applied',
+    ).toBe('go home');
+  });
+});

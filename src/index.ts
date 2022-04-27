@@ -35,11 +35,26 @@ export type FieldProps<State extends StateRestriction, Name extends keyof State>
     value: State[Name],
     errorMessage: string | null,
   ) => ReactNode;
+
+  /**
+   * Mayoiga Field will memoize the result of renderProps for performance.
+   * If your renderProps depends on external variables, you should apply those on deps
+   */
+  deps?: ReadonlyArray<unknown>;
 };
 
 export type SliceProps<State extends StateRestriction, Selected extends ReadonlyArray<unknown>> = {
   selector: (s: FullFormState<State>) => Selected;
   children: (tool: {handleChange: HandleChangeAction<State>}, ...value: Readonly<Selected>) => ReactNode;
+  /**
+   * Mayoiga Slicer will memoize the result of renderProps for performance.
+   * If your renderProps depends on external variables, you should apply those on deps
+   *
+   * ```typescript
+   * <Slicer selector={s => [s.value.selected]} deps={[selection]}>{(tools, selected: string) => <AwesomeSelection value={selected} options={selection} />}</Slicer>
+   * ```
+   */
+  deps?: ReadonlyArray<unknown>;
 };
 
 type FormControllerBehavior<StateBeforeValidation> = {
@@ -256,40 +271,46 @@ export function createFormHook<StateBeforeValidation, Schema extends ZodType<any
 
     components: {
       Slicer<R extends ReadonlyArray<unknown>>(props: SliceProps<StateBeforeValidation, R>) {
-        const {selector, children} = props;
-        const value = formHook.useSelector(selector);
-        return useMemo(() => {
-          const renderContent = children({handleChange: formHook.actions.handleChange}, ...value);
-          return createElement(Fragment, {}, renderContent);
-        }, value);
+        const {selector, children, deps} = props;
+        const slicedValues = formHook.useSelector(selector);
+        return useMemo(
+          () => {
+            const renderContent = children({handleChange: formHook.actions.handleChange}, ...slicedValues);
+            return createElement(Fragment, {}, renderContent);
+          },
+          deps ? [...slicedValues, ...deps] : slicedValues,
+        );
       },
       Field<Name extends keyof StateBeforeValidation>(props: FieldProps<StateBeforeValidation, Name>) {
-        const {name, children} = props;
+        const {name, children, deps} = props;
         const [value, errMsg] = store.useSelector((s) => [s.value[name], s.errors[name]] as const);
-        return useMemo(() => {
-          const renderContent = children(
-            {
-              name,
-              value,
-              onChange: (name_or_event: unknown, value_or_none?: unknown) => {
-                if (typeof name_or_event === 'string') {
-                  // assumes name is valid if it's string
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-                  return store.actions.handleChange(name_or_event as Name, value_or_none as any);
-                }
-                if (isChangeEvent(name_or_event)) {
-                  const target: any = name_or_event.currentTarget || name_or_event.target;
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-                  return store.actions.handleChange(target.name, target.value);
-                }
-                throw new Error('`handleChange` handles unexpected formed object.');
+        return useMemo(
+          () => {
+            const renderContent = children(
+              {
+                name,
+                value,
+                onChange: (name_or_event: unknown, value_or_none?: unknown) => {
+                  if (typeof name_or_event === 'string') {
+                    // assumes name is valid if it's string
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    return store.actions.handleChange(name_or_event as Name, value_or_none as any);
+                  }
+                  if (isChangeEvent(name_or_event)) {
+                    const target: any = name_or_event.currentTarget || name_or_event.target;
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+                    return store.actions.handleChange(target.name, target.value);
+                  }
+                  throw new Error('`handleChange` handles unexpected formed object.');
+                },
               },
-            },
-            value,
-            errMsg,
-          );
-          return createElement(Fragment, {}, renderContent);
-        }, [value, errMsg]);
+              value,
+              errMsg,
+            );
+            return createElement(Fragment, {}, renderContent);
+          },
+          deps ? [value, errMsg, ...deps] : [value, errMsg],
+        );
       },
     },
     actions: store.actions,
