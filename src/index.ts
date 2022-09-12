@@ -57,7 +57,7 @@ export type SliceProps<State extends StateRestriction, Selected extends Readonly
   deps?: ReadonlyArray<unknown>;
 };
 
-type FormControllerBehavior<StateBeforeValidation> = {
+type FormControllerBehavior<StateBeforeValidation extends StateRestriction> = {
   /** For testing */
   peek: (
     eyeball: (prev: FullFormState<StateBeforeValidation>) => void,
@@ -234,7 +234,7 @@ type FormHook<State extends StateRestriction, Schema extends ZodType<any, any, a
 /**
  * @typeParam InitialState should be shallow
  */
-export function createFormHook<StateBeforeValidation, Schema extends ZodType<any, any, any>>(
+export function createFormHook<StateBeforeValidation extends StateRestriction, Schema extends ZodType<any, any, any>>(
   initialState: StateBeforeValidation,
   schema: Schema,
 ): FormHook<StateBeforeValidation, Schema> {
