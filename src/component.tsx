@@ -2,7 +2,7 @@ import React from 'react';
 
 import type {SliceProps, FieldProps, StateRestriction, Controller} from './index';
 
-type ControlledComponentProps<State, Props> = Props & {
+type ControlledComponentProps<State extends StateRestriction, Props> = Props & {
   controller: Controller<State>;
 };
 
