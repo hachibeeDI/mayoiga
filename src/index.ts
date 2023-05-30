@@ -178,7 +178,8 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
     },
     pushFormErrors: (validator) => (prev) => {
       const pushedErrors = validator(prev.value);
-      return {...prev, errors: {...prev.errors, ...pushedErrors}};
+      const allErrors = {...prev.errors, ...pushedErrors};
+      return {...prev, isValid: Object.keys(allErrors).length === 0, errors: allErrors};
     },
     reduceFormErrors: (reducer) => (prev) => {
       return {...prev, errors: reducer(prev.errors)};

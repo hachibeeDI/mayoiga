@@ -142,3 +142,35 @@ test('User is able to re-initialize the form state', async () => {
   TestFormHook.actions.initializeForm({}, {cleanup: true});
   expect(TestFormHook.api.getState().isDirty).toBeFalsy();
 });
+
+test('User is able to push server side validation', async () => {
+  const TestFormHook = createTestHook();
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  await userEvent.type(ageInput, '9999');
+
+  TestFormHook.actions.pushFormErrors((_s) => ({age: 'server side error'}));
+  const state1 = TestFormHook.api.getState();
+  expect(state1.isDirty).toBeTruthy();
+  expect(state1.isValid).toBeFalsy();
+  expect(state1.errors.age).toEqual('server side error');
+
+  await userEvent.type(ageInput, 'hgoehoge');
+
+  // confirm empty field won't overwrite any messages
+  TestFormHook.actions.pushFormErrors((_s) => ({}));
+  const state2 = TestFormHook.api.getState();
+  expect(state2.isDirty).toBeTruthy();
+  expect(state2.isValid).toBeFalsy();
+  expect(state2.errors.age).toEqual('Invalid input');
+});
