@@ -28,7 +28,8 @@ type FormStateBeforeValidation = {
   marked: boolean;
 };
 
-const createTestHook = () => createFormHook({name: '', description: '', age: '', marked: false} as FormStateBeforeValidation, testSchema);
+const initialState = {name: '', description: '', age: '', marked: false};
+const createTestHook = () => createFormHook(initialState as FormStateBeforeValidation, testSchema);
 
 const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidation>}) => {
   const {controller} = props;
@@ -119,4 +120,26 @@ test('zod parse value before submit', async () => {
       expect(s.errors.age).toBeNull();
     });
   });
+
+});
+
+test('User is able to re-initialize the form state', async () => {
+  const TestFormHook = createTestHook();
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  await userEvent.type(ageInput, '9999');
+
+  expect(TestFormHook.api.getState().isDirty).toBeTruthy();
+  TestFormHook.actions.initializeForm({}, {cleanup: true});
+  expect(TestFormHook.api.getState().isDirty).toBeFalsy();
 });
