@@ -67,9 +67,15 @@ type FormControllerBehavior<StateBeforeValidation extends StateRestriction> = {
 
   /**
    * Initialize form state without validation.
+   *
+   * @param initialVal value to initialize form state
+   * @param opts.cleanup if true, form state is become pristine (which means, `form.isDirty` is going to be false) .
    */
   initializeForm: (
     initialVal: Partial<StateBeforeValidation>,
+    opts?: {
+      cleanup?: true
+    }
   ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
 
   /**
@@ -151,10 +157,11 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
     },
 
     reset: () => () => fullInitialState,
-    initializeForm: (initialVal) => (prev) => ({
+    initializeForm: (initialVal, opts) => (prev) => ({
       ...prev,
       value: {...prev.value, ...initialVal},
       errors: {...initialErrors},
+      isDirty: (opts?.cleanup === true) ? false : prev.isDirty,
     }),
     handleIssues: (issues) => (prev) => {
       // FIXME: handle duplication
@@ -196,7 +203,19 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
 
 type ActionsCanBePublic<State extends StateRestriction> = {
   reset: VoidFunction;
-  initializeForm: (initial: Partial<State>) => void;
+
+  /**
+   * Initialize form state without validation.
+   *
+   * @param initialVal value to initialize form state
+   * @param opts.cleanup if true, form state is become pristine (which means, `form.isDirty` is going to be false) .
+   */
+  initializeForm: (
+    initial: Partial<State>,
+    opts?: {
+      cleanup?: true
+    }
+  ) => void;
   pushFormErrors: (validator: (state: State) => Partial<FormErrors<State>>) => void;
   handleChange: HandleChangeAction<State>;
   handleBulkChange: (setter: (prev: State) => Partial<State>) => void;
