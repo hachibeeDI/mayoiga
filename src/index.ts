@@ -74,8 +74,8 @@ type FormControllerBehavior<StateBeforeValidation extends StateRestriction> = {
   initializeForm: (
     initialVal: Partial<StateBeforeValidation>,
     opts?: {
-      cleanup?: true
-    }
+      cleanup?: true;
+    },
   ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
 
   /**
@@ -161,7 +161,7 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
       ...prev,
       value: {...prev.value, ...initialVal},
       errors: {...initialErrors},
-      isDirty: (opts?.cleanup === true) ? false : prev.isDirty,
+      isDirty: opts?.cleanup === true ? false : prev.isDirty,
     }),
     handleIssues: (issues) => (prev) => {
       // FIXME: handle duplication
@@ -213,8 +213,8 @@ type ActionsCanBePublic<State extends StateRestriction> = {
   initializeForm: (
     initial: Partial<State>,
     opts?: {
-      cleanup?: true
-    }
+      cleanup?: true;
+    },
   ) => void;
   pushFormErrors: (validator: (state: State) => Partial<FormErrors<State>>) => void;
   handleChange: HandleChangeAction<State>;

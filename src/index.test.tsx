@@ -120,7 +120,6 @@ test('zod parse value before submit', async () => {
       expect(s.errors.age).toBeNull();
     });
   });
-
 });
 
 test('User is able to re-initialize the form state', async () => {
