@@ -26,8 +26,6 @@
     "noErrorTruncation": true,
 
     "lib": ["dom", "esnext"],
-    // TODO: node is for vitest... I should isolate it probably?
-    "types": ["react/next"],
 
     "rootDir": "./src",
     "outDir": "./dist"
