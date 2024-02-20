@@ -120,10 +120,13 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
   type StateKeys = keyof StateBeforeValidation;
 
   const initialErrors = Object.freeze(
-    Object.keys(initialState).reduce((buf, k) => {
-      buf[k as StateKeys] = null;
-      return buf;
-    }, {} as any as Err),
+    Object.keys(initialState).reduce(
+      (buf, k) => {
+        buf[k as StateKeys] = null;
+        return buf;
+      },
+      {} as any as Err,
+    ),
   );
 
   const fullInitialState: FullState = Object.freeze({
@@ -137,15 +140,18 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
     if (result.success) {
       return {...prev, isDirty: true, isValid: true, value: newValue, errors: initialErrors};
     }
-    const newErrors = result.error.issues.reduce((buf, iss) => {
-      // TODO: should support nested value?
-      const shallowPath = iss.path[0];
-      if (shallowPath === undefined) {
+    const newErrors = result.error.issues.reduce(
+      (buf, iss) => {
+        // TODO: should support nested value?
+        const shallowPath = iss.path[0];
+        if (shallowPath === undefined) {
+          return buf;
+        }
+        buf[shallowPath as any as StateKeys] = iss.message;
         return buf;
-      }
-      buf[shallowPath as any as StateKeys] = iss.message;
-      return buf;
-    }, {} as any as Err);
+      },
+      {} as any as Err,
+    );
 
     return {...prev, isDirty: true, isValid: false, errors: newErrors, value: newValue};
   };
@@ -165,14 +171,17 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
     }),
     handleIssues: (issues) => (prev) => {
       // FIXME: handle duplication
-      const newErrors = issues.reduce((buf, iss) => {
-        const shallowPath = iss.path[0];
-        if (shallowPath === undefined) {
+      const newErrors = issues.reduce(
+        (buf, iss) => {
+          const shallowPath = iss.path[0];
+          if (shallowPath === undefined) {
+            return buf;
+          }
+          buf[shallowPath as any as StateKeys] = iss.message;
           return buf;
-        }
-        buf[shallowPath as any as StateKeys] = iss.message;
-        return buf;
-      }, {} as any as Err);
+        },
+        {} as any as Err,
+      );
 
       return {...prev, isDirty: true, isValid: false, errors: newErrors};
     },
