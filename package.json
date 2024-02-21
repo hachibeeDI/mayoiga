@@ -1,6 +1,6 @@
 {
   "name": "mayoiga",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Type safe hook based form library for React",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
