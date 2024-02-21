@@ -249,6 +249,10 @@ export type Controller<State extends StateRestriction> = {
 type FormHook<State extends StateRestriction, Schema extends ZodType<any, any, any>> = {
   controller: Controller<State>;
 
+  /**
+   * @param handler handling logic
+   * @returns created handler is always return Promise, because of the schema validation run it asynchronously.
+   */
   handleSubmit: <R>(
     handler: (
       e: BaseSyntheticEvent,
