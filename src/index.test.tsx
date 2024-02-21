@@ -90,13 +90,20 @@ test('zod parse value before submit', async () => {
     } else {
       expect('should not called').toBe(result.error);
     }
+    return Promise.resolve('returns value');
   });
 
   const Top = () => {
     return (
       <div>
         <AgeInputComponent controller={TestFormHook} />
-        <button data-testid="submit-button" onClick={handleSubmitTester} />
+        <button
+          data-testid="submit-button"
+          onClick={async (e) => {
+            const returnedValue = await handleSubmitTester(e);
+            expect(returnedValue).toBe('returns value');
+          }}
+        />
       </div>
     );
   };
@@ -119,6 +126,63 @@ test('zod parse value before submit', async () => {
     TestFormHook.api.actions.peek((s) => {
       expect(s.value.age).toBe(INPUT_AGE);
       expect(s.errors.age).toBeNull();
+    });
+  });
+});
+
+test('able to handle parse error on submit', async () => {
+  const TestFormHook = createTestHook();
+
+  const INPUT_AGE = 'aaaa';
+  const EXPECTED_ISSUE = {
+    code: 'custom',
+    message: 'Invalid input',
+    path: ['age'],
+  };
+
+  const handleSubmitTester = TestFormHook.handleSubmit((e) => (result) => {
+    if (result.success) {
+      expect('should not succeed').toBe(false);
+    } else {
+      expect(result.success).toBe(false);
+      expect(result.error).toStrictEqual([EXPECTED_ISSUE]);
+    }
+    return Promise.resolve('returns value');
+  });
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook} />
+        <button
+          data-testid="submit-button"
+          onClick={async (e) => {
+            const returnedValue = await handleSubmitTester(e);
+            expect(returnedValue).toBe('returns value');
+          }}
+        />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  await userEvent.type(ageInput, INPUT_AGE);
+
+  await waitFor(() => {
+    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+    expect(ageInput.value).toBe(INPUT_AGE);
+  });
+
+  const submitButton = screen.getByTestId('submit-button');
+  await userEvent.click(submitButton);
+
+  await waitFor(() => {
+    console.log('waiting');
+    TestFormHook.api.actions.peek((s) => {
+      expect(s.value.age).toBe(INPUT_AGE);
+      expect(s.errors.age).toBe(EXPECTED_ISSUE.message);
     });
   });
 });
