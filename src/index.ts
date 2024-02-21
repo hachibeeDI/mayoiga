@@ -249,13 +249,15 @@ export type Controller<State extends StateRestriction> = {
 type FormHook<State extends StateRestriction, Schema extends ZodType<any, any, any>> = {
   controller: Controller<State>;
 
-  handleSubmit: (
+  /**
+   * @param handler handling logic
+   * @returns created handler is always return Promise, because of the schema validation run it asynchronously.
+   */
+  handleSubmit: <R>(
     handler: (
       e: BaseSyntheticEvent,
-    ) => (
-      val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>},
-    ) => void | Promise<void>,
-  ) => (e: BaseSyntheticEvent) => void;
+    ) => (val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>}) => R,
+  ) => (e: BaseSyntheticEvent) => Promise<R>;
 
   api: Subscriber<FullFormState<State>, FormControllerBehavior<State>>;
 } & Controller<State>;
@@ -276,12 +278,10 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
       }, []);
     },
     useSelector: store.useSelector,
-    handleSubmit: (
+    handleSubmit: <R>(
       handler: (
         e: BaseSyntheticEvent,
-      ) => (
-        val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>},
-      ) => void | Promise<void>,
+      ) => (val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>}) => R,
     ) => {
       return (e: BaseSyntheticEvent) => {
         const eventHandled = handler(e);
@@ -292,8 +292,20 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             return eventHandled({success: true, data: result.data, error: undefined});
           }
-          void eventHandled({success: false, error: result.error.issues});
-          store.actions.handleIssues(result.error.issues);
+
+          const handled: any = eventHandled({success: false, error: result.error.issues});
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          if (typeof handled['then'] === 'function') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            return handled.then((x: any) => {
+              store.actions.handleIssues(result.error.issues);
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+              return x;
+            }) as R;
+          } else {
+            store.actions.handleIssues(result.error.issues);
+            return handled as R;
+          }
         });
       };
     },
