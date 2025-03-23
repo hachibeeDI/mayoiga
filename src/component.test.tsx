@@ -1,6 +1,7 @@
-import {render, screen, waitFor} from '@testing-library/react';
+import {screen} from '@testing-library/dom';
+import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import React from 'react';
+import React, {act} from 'react';
 
 import {test, expect} from 'vitest';
 
@@ -30,7 +31,16 @@ type FormStateBeforeValidation = {
   marked: boolean;
 };
 
-const createTestHook = () => createFormHook({name: '', description: '', age: '', marked: false} as FormStateBeforeValidation, testSchema);
+const createTestHook = () =>
+  createFormHook(
+    {
+      name: '',
+      description: '',
+      age: '',
+      marked: false,
+    } as FormStateBeforeValidation,
+    testSchema,
+  );
 
 // afterEach(cleanup);
 
@@ -54,7 +64,7 @@ test('Field component works fine in basic usage.', async () => {
   // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
-  await waitFor(() => {
+  await act(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
     expect(ageInput.value).toBe(INPUT_AGE);
     TestFormHook.api.actions.peek((s) => {
@@ -86,7 +96,7 @@ test('Slice component works fine in basic usage.', async () => {
   // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
-  await waitFor(() => {
+  await act(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
     expect(ageInput.value).toBe(INPUT_AGE);
     TestFormHook.api.actions.peek((s) => {
@@ -99,7 +109,11 @@ test('Slice component works fine in basic usage.', async () => {
 test('A user able to create a reusable component', async () => {
   const TestFormHook = createTestHook();
 
-  function NarrowTypedExpected(props: {controller: Controller<{age: string}>}) {
+  function NarrowTypedExpected(props: {
+    controller: Controller<{
+      age: string;
+    }>;
+  }) {
     return (
       <Field controller={props.controller} name="age">
         {(tool) => <input data-testid="age-input" {...tool} />}
@@ -107,14 +121,20 @@ test('A user able to create a reusable component', async () => {
     );
   }
 
-  function ErrorDisplayer(props: {controller: Controller<{age: string}>}) {
+  function ErrorDisplayer(props: {
+    controller: Controller<{
+      age: string;
+    }>;
+  }) {
     const {controller} = props;
     return (
       <Slicer controller={controller} selector={(s) => [s.value.age] as const}>
         {(tool, age: string) => (
           <button
             onClick={(e) => {
-              controller.actions.pushFormErrors((_state) => ({age: age === '42' ? 'yes!!!' : 'noooo'}));
+              controller.actions.pushFormErrors((_state) => ({
+                age: age === '42' ? 'yes!!!' : 'noooo',
+              }));
             }}
           />
         )}
@@ -135,7 +155,7 @@ test('A user able to create a reusable component', async () => {
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
   await userEvent.click(screen.getByRole('button'));
 
-  await waitFor(() => {
+  await act(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
     expect(ageInput.value).toBe(INPUT_AGE);
     TestFormHook.api.actions.peek((s) => {
@@ -148,7 +168,12 @@ test('A user able to create a reusable component', async () => {
 test('`deps` field could destruct memoization', async () => {
   const TestFormHook = createTestHook();
   // intentional sample to replicate the situation
-  const OtherFormHook = createFormHook({minAge: '30'}, zod.object({minAge: zod.string()}));
+  const OtherFormHook = createFormHook(
+    {minAge: '30'},
+    zod.object({
+      minAge: zod.string(),
+    }),
+  );
 
   const DATA_ID_RE_RENDER_BY_DEPS = 'refresh-by-deps';
   const DATA_ID_NOT_RERENDER_NO_DEPS = 'no-refersh-no-deps';
@@ -182,7 +207,7 @@ test('`deps` field could destruct memoization', async () => {
 
   await userEvent.type(screen.getByTestId('ageInput'), '16');
 
-  await waitFor(() => {
+  await act(() => {
     expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent).toBe('go home');
     // expect(await screen.findByText('You can buy this content')).toBeDefined();
   });
@@ -190,12 +215,12 @@ test('`deps` field could destruct memoization', async () => {
   await userEvent.clear(screen.getByTestId('minAgeInput'));
   await userEvent.type(screen.getByTestId('minAgeInput'), '10');
 
-  await waitFor(() => {
+  await act(() => {
     expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent, 'Slicer should re-execute renderProps if `deps` are changed').toBe(
       'You can buy this content',
     );
   });
-  await waitFor(() => {
+  await act(() => {
     expect(
       screen.getByTestId(DATA_ID_NOT_RERENDER_NO_DEPS).textContent,
       'Same logic but would not refresh because external dependencies are not applied',

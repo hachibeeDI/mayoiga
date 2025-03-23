@@ -10,6 +10,9 @@ import type {infer as zodInfer, SafeParseReturnType, ZodIssue, ZodType} from 'zo
 
 export type StateRestriction = Record<string, any>;
 
+var x = 1;
+console.log(x);
+
 type FormStatus = {
   isDirty: boolean;
   isValid: boolean;
@@ -19,7 +22,10 @@ type FormErrors<State extends StateRestriction> = {
   [k in keyof State]: string | null;
 };
 
-export type FullFormState<State extends StateRestriction> = FormStatus & {value: State; errors: FormErrors<State>};
+export type FullFormState<State extends StateRestriction> = FormStatus & {
+  value: State;
+  errors: FormErrors<State>;
+};
 
 export type HandleChangeAction<State extends StateRestriction, R = void> = <Name extends keyof State>(name: Name, value: State[Name]) => R;
 
@@ -45,7 +51,12 @@ export type FieldProps<State extends StateRestriction, Name extends keyof State>
 
 export type SliceProps<State extends StateRestriction, Selected extends ReadonlyArray<unknown>> = {
   selector: (s: FullFormState<State>) => Selected;
-  children: (tool: {handleChange: HandleChangeAction<State>}, ...value: Readonly<Selected>) => ReactNode;
+  children: (
+    tool: {
+      handleChange: HandleChangeAction<State>;
+    },
+    ...value: Readonly<Selected>
+  ) => ReactNode;
   /**
    * Mayoiga Slicer will memoize the result of renderProps for performance.
    * If your renderProps depends on external variables, you should apply those on deps
@@ -109,7 +120,10 @@ type FormControllerBehavior<StateBeforeValidation extends StateRestriction> = {
   ) => (prev: FullFormState<StateBeforeValidation>) => FullFormState<StateBeforeValidation>;
 };
 
-const initialFormState = Object.freeze({isDirty: false, isValid: false});
+const initialFormState = Object.freeze({
+  isDirty: false,
+  isValid: false,
+});
 
 function createFormStore<StateBeforeValidation extends StateRestriction, Schema extends ZodType<any, any, any>>(
   initialState: StateBeforeValidation,
@@ -138,7 +152,13 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
   const withValidation = (prev: FullState, newValue: StateBeforeValidation) => {
     const result = schema.safeParse(newValue);
     if (result.success) {
-      return {...prev, isDirty: true, isValid: true, value: newValue, errors: initialErrors};
+      return {
+        ...prev,
+        isDirty: true,
+        isValid: true,
+        value: newValue,
+        errors: initialErrors,
+      };
     }
     const newErrors = result.error.issues.reduce(
       (buf, iss) => {
@@ -153,7 +173,13 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
       {} as any as Err,
     );
 
-    return {...prev, isDirty: true, isValid: false, errors: newErrors, value: newValue};
+    return {
+      ...prev,
+      isDirty: true,
+      isValid: false,
+      errors: newErrors,
+      value: newValue,
+    };
   };
 
   return createStore(fullInitialState, {
@@ -165,7 +191,10 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
     reset: () => () => fullInitialState,
     initializeForm: (initialVal, opts) => (prev) => ({
       ...prev,
-      value: {...prev.value, ...initialVal},
+      value: {
+        ...prev.value,
+        ...initialVal,
+      },
       errors: {...initialErrors},
       isDirty: opts?.cleanup === true ? false : prev.isDirty,
     }),
@@ -183,21 +212,39 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
         {} as any as Err,
       );
 
-      return {...prev, isDirty: true, isValid: false, errors: newErrors};
+      return {
+        ...prev,
+        isDirty: true,
+        isValid: false,
+        errors: newErrors,
+      };
     },
     pushFormErrors: (validator) => (prev) => {
       const pushedErrors = validator(prev.value);
-      const allErrors = {...prev.errors, ...pushedErrors};
-      return {...prev, isValid: Object.keys(allErrors).length === 0, errors: allErrors};
+      const allErrors = {
+        ...prev.errors,
+        ...pushedErrors,
+      };
+      return {
+        ...prev,
+        isValid: Object.keys(allErrors).length === 0,
+        errors: allErrors,
+      };
     },
     reduceFormErrors: (reducer) => (prev) => {
-      return {...prev, errors: reducer(prev.errors)};
+      return {
+        ...prev,
+        errors: reducer(prev.errors),
+      };
     },
     handleChange: (name, value) => (prev) => {
       if (name in prev.value === false) {
         return prev;
       }
-      const newValue = {...prev.value, [name]: value};
+      const newValue = {
+        ...prev.value,
+        [name]: value,
+      };
       return withValidation(prev, newValue);
     },
     reduceFormState: (reducer) => (prev) => {
@@ -205,7 +252,10 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
       return withValidation(prev, reducedState);
     },
     handleBulkChange: (setter) => (prev) => {
-      const mergedNewState = {...prev.value, ...setter(prev.value)};
+      const mergedNewState = {
+        ...prev.value,
+        ...setter(prev.value),
+      };
       return withValidation(prev, mergedNewState);
     },
   });
@@ -254,9 +304,18 @@ type FormHook<State extends StateRestriction, Schema extends ZodType<any, any, a
    * @returns created handler is always return Promise, because of the schema validation run it asynchronously.
    */
   handleSubmit: <R>(
-    handler: (
-      e: BaseSyntheticEvent,
-    ) => (val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>}) => R,
+    handler: (e: BaseSyntheticEvent) => (
+      val:
+        | {
+            success: true;
+            data: zodInfer<Schema>;
+            error: undefined;
+          }
+        | {
+            success: false;
+            error: ReadonlyArray<ZodIssue>;
+          },
+    ) => R,
   ) => (e: BaseSyntheticEvent) => Promise<R>;
 
   api: Subscriber<FullFormState<State>, FormControllerBehavior<State>>;
@@ -279,9 +338,18 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
     },
     useSelector: store.useSelector,
     handleSubmit: <R>(
-      handler: (
-        e: BaseSyntheticEvent,
-      ) => (val: {success: true; data: zodInfer<Schema>; error: undefined} | {success: false; error: ReadonlyArray<ZodIssue>}) => R,
+      handler: (e: BaseSyntheticEvent) => (
+        val:
+          | {
+              success: true;
+              data: zodInfer<Schema>;
+              error: undefined;
+            }
+          | {
+              success: false;
+              error: ReadonlyArray<ZodIssue>;
+            },
+      ) => R,
     ) => {
       return (e: BaseSyntheticEvent) => {
         const eventHandled = handler(e);
@@ -290,10 +358,17 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
           // FIXME: hook formを捨ててzodのバージョンをあげればこの辺に型をつけられる
           if (result.success) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-            return eventHandled({success: true, data: result.data, error: undefined});
+            return eventHandled({
+              success: true,
+              data: result.data,
+              error: undefined,
+            });
           }
 
-          const handled: any = eventHandled({success: false, error: result.error.issues});
+          const handled: any = eventHandled({
+            success: false,
+            error: result.error.issues,
+          });
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (typeof handled['then'] === 'function') {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
@@ -316,7 +391,12 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
         const slicedValues = formHook.useSelector(selector);
         return useMemo(
           () => {
-            const renderContent = children({handleChange: formHook.actions.handleChange}, ...slicedValues);
+            const renderContent = children(
+              {
+                handleChange: formHook.actions.handleChange,
+              },
+              ...slicedValues,
+            );
             return createElement(Fragment, {}, renderContent);
           },
           deps ? [...slicedValues, ...deps] : slicedValues,

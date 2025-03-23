@@ -1,8 +1,8 @@
-import {render, screen, waitFor} from '@testing-library/react';
+import {screen} from '@testing-library/dom';
+import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import React from 'react';
-
+import React, {act} from 'react';
 import {test, expect} from 'vitest';
 
 import * as zod from 'zod';
@@ -29,10 +29,17 @@ type FormStateBeforeValidation = {
   marked: boolean;
 };
 
-const initialState = {name: '', description: '', age: '', marked: false};
+const initialState = {
+  name: '',
+  description: '',
+  age: '',
+  marked: false,
+};
 const createTestHook = () => createFormHook(initialState as FormStateBeforeValidation, testSchema);
 
-const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidation>}) => {
+const AgeInputComponent = (props: {
+  controller: Controller<FormStateBeforeValidation>;
+}) => {
   const {controller} = props;
   const [[age, errorMessage], {handleChange}] = useFormSlice(controller, (s) => [s.value.age, s.errors.age] as const);
   return (
@@ -72,7 +79,7 @@ test('useSelector can select the fields', async () => {
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
   // TestFormHook.actions.handleBulkChange(prev => ({...prev, name: 'test', description: 'desc'}));
 
-  await waitFor(() => {
+  await act(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
     expect(ageInput.value).toBe(INPUT_AGE);
   });
@@ -113,7 +120,7 @@ test('zod parse value before submit', async () => {
   const ageInput: HTMLInputElement = screen.getByTestId('age-input');
   await userEvent.type(ageInput, INPUT_AGE);
 
-  await waitFor(() => {
+  await act(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
     expect(ageInput.value).toBe(INPUT_AGE);
   });
@@ -121,7 +128,7 @@ test('zod parse value before submit', async () => {
   const submitButton = screen.getByTestId('submit-button');
   await userEvent.click(submitButton);
 
-  await waitFor(() => {
+  await act(() => {
     console.log('waiting');
     TestFormHook.api.actions.peek((s) => {
       expect(s.value.age).toBe(INPUT_AGE);
@@ -170,7 +177,7 @@ test('able to handle parse error on submit', async () => {
   const ageInput: HTMLInputElement = screen.getByTestId('age-input');
   await userEvent.type(ageInput, INPUT_AGE);
 
-  await waitFor(() => {
+  await act(() => {
     const ageInput: HTMLInputElement = screen.getByTestId('age-input');
     expect(ageInput.value).toBe(INPUT_AGE);
   });
@@ -178,7 +185,7 @@ test('able to handle parse error on submit', async () => {
   const submitButton = screen.getByTestId('submit-button');
   await userEvent.click(submitButton);
 
-  await waitFor(() => {
+  await act(() => {
     console.log('waiting');
     TestFormHook.api.actions.peek((s) => {
       expect(s.value.age).toBe(INPUT_AGE);
@@ -224,7 +231,9 @@ test('User is able to push server side validation', async () => {
   const ageInput: HTMLInputElement = screen.getByTestId('age-input');
   await userEvent.type(ageInput, '9999');
 
-  TestFormHook.actions.pushFormErrors((_s) => ({age: 'server side error'}));
+  TestFormHook.actions.pushFormErrors((_s) => ({
+    age: 'server side error',
+  }));
   const state1 = TestFormHook.api.getState();
   expect(state1.isDirty).toBeTruthy();
   expect(state1.isValid).toBeFalsy();
