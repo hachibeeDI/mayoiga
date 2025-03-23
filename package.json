@@ -16,8 +16,8 @@
     "prebuild": "npm run clean",
     "build": "tsc",
     "check:type": "tsc --noEmit",
-    "check:style": "prettier --check 'src/**/*.{js,ts,jsx,tsx}'",
-    "check:lint": "eslint 'src/**/*.{ts,tsx}'",
+    "check:lint": "biome lint src/",
+    "check:style": "biome format src/",
     "check-all": "npm run check:type && npm run check:style && npm run check:lint && npm run build --noEmit && npm run test",
     "fix-all": "npm run check:style -- --write && npm run check:lint -- --fix",
     "prepublish": "npm run check-all && npm run build"
@@ -51,13 +51,13 @@
     "@types/react": "^19.0.12"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.13.11",
     "@types/react": "^19.0.12",
     "@types/use-sync-external-store": "^0.0.6",
-    "biome": "^0.3.3",
     "jsdom": "^26.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
