@@ -19,6 +19,7 @@
     "check:lint": "biome lint src/",
     "check:style": "biome format src/",
     "check-all": "npm run check:type && npm run check:style && npm run check:lint && npm run build --noEmit && npm run test",
+    "fix:lint": "biome lint src/ --fix",
     "fix-all": "npm run check:style -- --write && npm run check:lint -- --fix",
     "prepublish": "npm run check-all && npm run build"
   },

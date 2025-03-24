@@ -1,16 +1,13 @@
+import {expect, test} from 'vitest';
+
 import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React, {act} from 'react';
-
-import {test, expect} from 'vitest';
-
 import * as zod from 'zod';
 
 import {Field, Slicer} from './component';
-
 import {createFormHook} from './index';
-
 import type {Controller} from './index';
 
 const testSchema = zod.object({
@@ -131,6 +128,7 @@ test('A user able to create a reusable component', async () => {
       <Slicer controller={controller} selector={(s) => [s.value.age] as const}>
         {(tool, age: string) => (
           <button
+            type="button"
             onClick={(e) => {
               controller.actions.pushFormErrors((_state) => ({
                 age: age === '42' ? 'yes!!!' : 'noooo',

@@ -3,7 +3,7 @@ import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import React, {act} from 'react';
-import {test, expect} from 'vitest';
+import {expect, test} from 'vitest';
 
 import * as zod from 'zod';
 
@@ -105,6 +105,7 @@ test('zod parse value before submit', async () => {
       <div>
         <AgeInputComponent controller={TestFormHook} />
         <button
+          type="button"
           data-testid="submit-button"
           onClick={async (e) => {
             const returnedValue = await handleSubmitTester(e);
@@ -162,6 +163,7 @@ test('able to handle parse error on submit', async () => {
       <div>
         <AgeInputComponent controller={TestFormHook} />
         <button
+          type="button"
           data-testid="submit-button"
           onClick={async (e) => {
             const returnedValue = await handleSubmitTester(e);
