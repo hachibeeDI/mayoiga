@@ -1,23 +1,19 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
   "files": {
-    "include": [
-      "src/**/*.ts",
-      "src/**/*.tsx"
-    ]
+    "includes": ["**/src/**/*.ts", "**/src/**/*.tsx"]
   },
-	"formatter": {
+  "formatter": {
     "bracketSpacing": false,
-		"enabled": true,
-		"formatWithErrors": false,
-		"indentStyle": "space",
-		"indentWidth": 2,
-		"lineEnding": "lf",
-		"lineWidth": 140,
-		"attributePosition": "auto"
-
-	},
-	"organizeImports": { "enabled": true },
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 140,
+    "attributePosition": "auto"
+  },
+  "assist": {"actions": {"source": {"organizeImports": "on"}}},
 
   "linter": {
     "enabled": true,

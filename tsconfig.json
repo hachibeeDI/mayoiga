@@ -5,6 +5,7 @@
     "declaration": true,
     "jsx": "react",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     // TODO: skip while vitest is broken
     "skipLibCheck": true,
 

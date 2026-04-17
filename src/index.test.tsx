@@ -37,9 +37,7 @@ const initialState = {
 };
 const createTestHook = () => createFormHook(initialState as FormStateBeforeValidation, testSchema);
 
-const AgeInputComponent = (props: {
-  controller: Controller<FormStateBeforeValidation>;
-}) => {
+const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidation>}) => {
   const {controller} = props;
   const [[age, errorMessage], {handleChange}] = useFormSlice(controller, (s) => [s.value.age, s.errors.age] as const);
   return (
