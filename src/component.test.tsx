@@ -163,6 +163,28 @@ test('A user able to create a reusable component', async () => {
   });
 });
 
+test('Field onChange throws when called with neither a string name nor a ChangeEvent', () => {
+  const TestFormHook = createTestHook();
+  let captured: ((x: unknown) => void) | undefined;
+
+  const Top = () => (
+    <Field controller={TestFormHook.controller} name="age">
+      {(tool) => {
+        // Capture the overloaded onChange so we can invoke it with an
+        // unexpected argument shape outside of React's render cycle.
+        captured = tool.onChange as unknown as (x: unknown) => void;
+        return <input data-testid="age-input" {...tool} />;
+      }}
+    </Field>
+  );
+  render(<Top />);
+
+  expect(captured).toBeDefined();
+  // A number is neither a string (name path) nor an object with `target`
+  // (ChangeEvent path), so the onChange must fall through to the throw.
+  expect(() => captured?.(42)).toThrow('`handleChange` handles unexpected formed object.');
+});
+
 test('`deps` field could destruct memoization', async () => {
   const TestFormHook = createTestHook();
   // intentional sample to replicate the situation
