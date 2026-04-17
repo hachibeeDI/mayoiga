@@ -160,7 +160,7 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
       }
       buf[shallowPath as StateKeys] = iss.message;
       return buf;
-    }, {} as Err);
+    }, {...initialErrors});
 
     return {
       ...prev,
@@ -196,7 +196,7 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
         }
         buf[shallowPath as StateKeys] = iss.message;
         return buf;
-      }, {} as Err);
+      }, {...initialErrors});
 
       return {
         ...prev,
@@ -213,7 +213,7 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
       };
       return {
         ...prev,
-        isValid: Object.keys(allErrors).length === 0,
+        isValid: Object.values(allErrors).every((v) => v == null),
         errors: allErrors,
       };
     },

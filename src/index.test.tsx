@@ -248,3 +248,113 @@ test('User is able to push server side validation', async () => {
   expect(state2.isValid).toBeFalsy();
   expect(state2.errors.age).toEqual('Invalid input');
 });
+
+// ============================================================
+// Bug detection tests
+// ============================================================
+
+test('BUG: pushFormErrors should set isValid to true when no actual errors exist', async () => {
+  const TestFormHook = createTestHook();
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  // Set valid values for all fields
+  TestFormHook.actions.handleBulkChange(() => ({
+    name: 'test',
+    description: 'desc',
+    age: '25',
+    marked: true,
+  }));
+
+  // Confirm form is valid before pushFormErrors
+  const stateBefore = TestFormHook.api.getState();
+  expect(stateBefore.isValid).toBe(true);
+
+  // Push empty errors (no actual errors)
+  TestFormHook.actions.pushFormErrors(() => ({}));
+
+  // isValid should still be true since there are no real errors
+  const stateAfter = TestFormHook.api.getState();
+  expect(stateAfter.isValid).toBe(true);
+});
+
+test('BUG: withValidation should keep all field keys in errors object (not drop missing ones)', async () => {
+  const TestFormHook = createTestHook();
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  // Type invalid age to trigger a validation error on age only
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  await userEvent.type(ageInput, 'invalid');
+
+  const state = TestFormHook.api.getState();
+
+  // age should have an error
+  expect(state.errors.age).toBeTruthy();
+
+  // Other fields should have null (not undefined) — they must still exist as keys
+  expect(state.errors.name).toBeNull();
+  expect(state.errors.description).toBeNull();
+  expect(state.errors.marked).toBeNull();
+
+  // All original keys should be present
+  const errorKeys = Object.keys(state.errors).sort();
+  const expectedKeys = ['age', 'description', 'marked', 'name'].sort();
+  expect(errorKeys).toEqual(expectedKeys);
+});
+
+test('BUG: isThennable should not crash when handler returns null or undefined', async () => {
+  const TestFormHook = createTestHook();
+
+  // Handler returns undefined (synchronous, no return value)
+  const handleSubmitTester = TestFormHook.handleSubmit((_e) => (_result) => {
+    // intentionally return undefined
+    return undefined;
+  });
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+        <button
+          type="button"
+          data-testid="submit-button"
+          onClick={async (e) => {
+            // This should not throw even when handler returns undefined
+            await handleSubmitTester(e);
+          }}
+        />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  // Type invalid value to trigger the error path where isThennable is called
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  await userEvent.type(ageInput, 'not-a-number');
+
+  const submitButton = screen.getByTestId('submit-button');
+  // This should not throw TypeError: Cannot read properties of undefined (reading 'then')
+  await userEvent.click(submitButton);
+
+  // If we reach here, isThennable didn't crash
+  const state = TestFormHook.api.getState();
+  expect(state.errors.age).toBeTruthy();
+});
