@@ -2,7 +2,7 @@ import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import React, {act} from 'react';
+import {act} from 'react';
 import {expect, test} from 'vitest';
 
 import * as zod from 'zod';
@@ -89,7 +89,7 @@ test('zod parse value before submit', async () => {
   const INPUT_AGE = '9';
   const PARSED_RESULT = Number(INPUT_AGE);
 
-  const handleSubmitTester = TestFormHook.handleSubmit((e) => (result) => {
+  const handleSubmitTester = TestFormHook.handleSubmit((_e) => (result) => {
     if (result.success) {
       expect(result.data.age).toBe(PARSED_RESULT);
     } else {
@@ -146,7 +146,7 @@ test('able to handle parse error on submit', async () => {
     path: ['age'],
   };
 
-  const handleSubmitTester = TestFormHook.handleSubmit((e) => (result) => {
+  const handleSubmitTester = TestFormHook.handleSubmit((_e) => (result) => {
     if (result.success) {
       expect('should not succeed').toBe(false);
     } else {

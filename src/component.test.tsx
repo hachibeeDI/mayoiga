@@ -3,7 +3,7 @@ import {expect, test} from 'vitest';
 import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import React, {act} from 'react';
+import {act} from 'react';
 import * as zod from 'zod';
 
 import {Field, Slicer} from './component';
@@ -126,10 +126,10 @@ test('A user able to create a reusable component', async () => {
     const {controller} = props;
     return (
       <Slicer controller={controller} selector={(s) => [s.value.age] as const}>
-        {(tool, age: string) => (
+        {(_tool, age: string) => (
           <button
             type="button"
-            onClick={(e) => {
+            onClick={(_e) => {
               controller.actions.pushFormErrors((_state) => ({
                 age: age === '42' ? 'yes!!!' : 'noooo',
               }));
