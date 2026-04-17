@@ -6,6 +6,12 @@ import type {ZodIssue, ZodType, infer as zodInfer} from 'zod';
 
 import {isChangeEvent, isThennable} from './utils';
 
+/**
+ * Base constraint for any form state shape handled by Mayoiga.
+ *
+ * State is expected to be a flat (shallow) record. Nested objects are not traversed
+ * by the built-in change/validation machinery.
+ */
 export type StateRestriction = Record<string, unknown>;
 
 type FormStatus = {
@@ -17,13 +23,41 @@ type FormErrors<State extends StateRestriction> = {
   [k in keyof State]: string | null;
 };
 
+/**
+ * Complete snapshot of a form: the current values, per-field error messages,
+ * and top-level status flags.
+ *
+ * @typeParam State - the pre-validation shape of the form
+ */
 export type FullFormState<State extends StateRestriction> = FormStatus & {
   value: State;
   errors: FormErrors<State>;
 };
 
+/**
+ * Signature of the handler used to update a single field value.
+ *
+ * `Name` is constrained to keys of the state so the value type is inferred
+ * from the field being written — invalid field/value pairs fail to type-check.
+ *
+ * @typeParam State - pre-validation form state
+ * @typeParam R - return type of the handler (defaults to `void`; internal
+ *   reducer variants return the next form state)
+ */
 export type HandleChangeAction<State extends StateRestriction, R = void> = <Name extends keyof State>(name: Name, value: State[Name]) => R;
 
+/**
+ * Props for the `<Field>` render-prop component.
+ *
+ * The `children` callback is called with a pre-wired `tool` object (so most inputs
+ * can simply spread it: `<input {...tool} />`), the current value, and the current
+ * error message for the field. `onChange` is overloaded to accept either a
+ * DOM `ChangeEvent` or an explicit `(name, value)` pair — the latter is useful
+ * for non-DOM inputs or typed values that do not serialize to strings.
+ *
+ * @typeParam State - pre-validation form state
+ * @typeParam Name - the key of the field being rendered
+ */
 export type FieldProps<State extends StateRestriction, Name extends keyof State> = {
   name: Name;
   children: (
@@ -44,6 +78,16 @@ export type FieldProps<State extends StateRestriction, Name extends keyof State>
   deps?: ReadonlyArray<unknown>;
 };
 
+/**
+ * Props for the `<Slicer>` render-prop component.
+ *
+ * Unlike `<Field>`, `<Slicer>` subscribes to an arbitrary derivation of the form
+ * state (via `selector`) and only re-renders when the selected tuple changes.
+ * Use this when you need to project multiple fields or computed values at once.
+ *
+ * @typeParam State - pre-validation form state
+ * @typeParam Selected - tuple of values returned by the selector
+ */
 export type SliceProps<State extends StateRestriction, Selected extends ReadonlyArray<unknown>> = {
   selector: (s: FullFormState<State>) => Selected;
   children: (
@@ -253,7 +297,14 @@ function createFormStore<StateBeforeValidation extends StateRestriction, Schema 
   });
 }
 
+/**
+ * The subset of store actions that are safe to call from application code.
+ *
+ * Internal reducers are hidden behind this narrower type so consumers only see
+ * effects (returning `void`) rather than the underlying reducer functions.
+ */
 type ActionsCanBePublic<State extends StateRestriction> = {
+  /** Reset the form back to its original initial state and clear all errors. */
   reset: VoidFunction;
 
   /**
@@ -268,17 +319,46 @@ type ActionsCanBePublic<State extends StateRestriction> = {
       cleanup?: true;
     },
   ) => void;
+  /**
+   * Merge external errors (e.g. server-side validation results) into the form.
+   *
+   * The validator receives the current value and returns a partial error map;
+   * unspecified fields keep their existing error. `isValid` is recomputed from
+   * the merged result.
+   */
   pushFormErrors: (validator: (state: State) => Partial<FormErrors<State>>) => void;
+  /** Update a single field. Triggers schema validation on the next state. */
   handleChange: HandleChangeAction<State>;
+  /**
+   * Update multiple fields in one commit.
+   *
+   * The setter receives the current value and returns a partial patch that is
+   * merged shallowly before validation runs once over the result.
+   */
   handleBulkChange: (setter: (prev: State) => Partial<State>) => void;
 };
 
 /**
- * Restricted type interface of the form store
+ * Narrowed public view of a form store.
+ *
+ * Passing a `Controller` (rather than the full form hook) to reusable components
+ * is the recommended way to keep them decoupled from the concrete form instance.
+ * See `useFormSlice` and the `<Field>` / `<Slicer>` components in `./component`
+ * for consumers of this shape.
+ *
  * TODO: more restriction
  */
 export type Controller<State extends StateRestriction> = {
+  /**
+   * Effect hook that seeds the form with `initialValue` on mount.
+   * Intended to be called once per form instance at the top of a component.
+   */
   useInitialize: (initialValue: Partial<State>) => void;
+  /**
+   * Subscribe to a derived slice of form state. The component re-renders only
+   * when the selected value changes according to `isEqual` (defaults to
+   * reference equality, as provided by the underlying store).
+   */
   useSelector: <R>(selector: (state: FullFormState<State>) => R, isEqual?: (prev: R, current: R) => boolean) => R;
 
   actions: ActionsCanBePublic<State>;
@@ -288,10 +368,30 @@ export type Controller<State extends StateRestriction> = {
   };
 };
 
+/**
+ * The full return value of {@link createFormHook}.
+ *
+ * Embeds a {@link Controller} for sharing with child components, plus the
+ * top-level `handleSubmit` helper and the raw store `api` for advanced use
+ * cases (e.g. reading state outside React, composing with other stores).
+ *
+ * For convenience the controller members are also spread onto the root, so
+ * `form.useSelector(...)` and `form.controller.useSelector(...)` behave
+ * identically.
+ */
 type FormHook<State extends StateRestriction, Schema extends ZodType<unknown>> = {
   controller: Controller<State>;
 
   /**
+   * Build a submit handler that runs schema validation before invoking
+   * the user-supplied logic.
+   *
+   * The outer callback receives the DOM event so the caller can call
+   * `e.preventDefault()` or inspect it before validation; the inner callback
+   * then receives a discriminated result with either the parsed data (on
+   * success) or the collected Zod issues (on failure). On failure the issues
+   * are also pushed into form errors so fields light up automatically.
+   *
    * @param handler handling logic
    * @returns created handler is always return Promise, because of the schema validation run it asynchronously.
    */
@@ -310,10 +410,36 @@ type FormHook<State extends StateRestriction, Schema extends ZodType<unknown>> =
     ) => R,
   ) => (e: BaseSyntheticEvent) => Promise<R>;
 
+  /**
+   * Low-level handle to the underlying store (from `nozuchi`).
+   *
+   * Exposed for advanced integrations — reading/writing state outside React,
+   * subscribing imperatively, or composing this form with other stores.
+   * Prefer the hook-based API (`useSelector`, `actions`, `components`) for
+   * ordinary component code.
+   */
   api: Subscriber<FullFormState<State>, FormControllerBehavior<State>>;
 } & Controller<State>;
 
 /**
+ * Create a self-contained form instance backed by a Zod schema.
+ *
+ * Mayoiga keeps two distinct state types in mind:
+ *
+ * 1. the **pre-validation** shape (what the UI edits, typically loose — nullable
+ *    fields, string inputs for numbers, etc.), inferred from `initialState`.
+ * 2. the **post-validation** shape, inferred from `schema` and surfaced through
+ *    `handleSubmit`. Zod transforms (e.g. `z.string().transform(Number)`) apply
+ *    here, so `data` in the submit callback can have a narrower/coerced type
+ *    than the editable state.
+ *
+ * The returned object exposes hooks (`useSelector`, `useInitialize`), actions
+ * (`handleChange`, `reset`, …), render-prop components (`Field`, `Slicer`),
+ * a `handleSubmit` builder, and the raw store `api` for advanced use.
+ *
+ * @param initialState - default values for every field; shape drives the
+ *   pre-validation type inference
+ * @param schema - Zod schema used for field-level and submit-time validation
  * @typeParam InitialState should be shallow
  */
 export function createFormHook<StateBeforeValidation extends StateRestriction, Schema extends ZodType<unknown>>(
@@ -433,6 +559,19 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
   };
 }
 
+/**
+ * Convenience hook that reads a derived slice of state and returns it alongside
+ * the controller's actions — mirroring the `[state, dispatch]` shape familiar
+ * from `useReducer`.
+ *
+ * Prefer this over calling `useSelector` and pulling `actions` separately when
+ * a component consumes both in the same render.
+ *
+ * @param formController - the controller obtained from {@link createFormHook}
+ *   (or passed down as a prop)
+ * @param selector - projection function from full form state to the needed slice
+ * @returns a tuple of `[slicedValue, actions]`
+ */
 export function useFormSlice<State extends StateRestriction, Sliced>(
   formController: Controller<State>,
   selector: (s: FullFormState<State>) => Sliced,
