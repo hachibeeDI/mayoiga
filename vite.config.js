@@ -6,5 +6,6 @@ export default defineConfig({
     // environment: 'happy-dom',  DO NOT USE IT
     environment: 'jsdom',
     setupFiles: ['./setup/vite-global-setup.js'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
   },
 })

@@ -370,7 +370,6 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
       Slicer<R extends ReadonlyArray<unknown>>(props: SliceProps<StateBeforeValidation, R>) {
         const {selector, children, deps} = props;
         const slicedValues = formHook.useSelector(selector);
-        // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
         return useMemo(
           () => {
             const renderContent = children(
@@ -381,13 +380,13 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
             );
             return createElement(Fragment, {}, renderContent);
           },
+          // biome-ignore lint/correctness/useExhaustiveDependencies: deps array is conditionally spread; Biome cannot statically verify it.
           deps ? [...slicedValues, ...deps] : slicedValues,
         );
       },
       Field<Name extends keyof StateBeforeValidation>(props: FieldProps<StateBeforeValidation, Name>) {
         const {name, children, deps} = props;
         const [value, errMsg] = store.useSelector((s) => [s.value[name], s.errors[name]] as const);
-        // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
         return useMemo(
           () => {
             const renderContent = children(
@@ -413,6 +412,7 @@ export function createFormHook<StateBeforeValidation extends StateRestriction, S
             );
             return createElement(Fragment, {}, renderContent);
           },
+          // biome-ignore lint/correctness/useExhaustiveDependencies: deps array is conditionally spread; Biome cannot statically verify it.
           deps ? [value, errMsg, ...deps] : [value, errMsg],
         );
       },

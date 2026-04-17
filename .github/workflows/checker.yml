@@ -9,34 +9,21 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [24.x]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ matrix.node-version }}
-
-    - uses: actions/checkout@v1
-    - name: Cache node_modules
-      uses: actions/cache@preview
-      with:
-        path: ~/.cache/yarn
-        key: ${{ runner.os }}-projectname-${{ hashFiles(format('{0}{1}', github.workspace, '/yarn.lock')) }}
-        restore-keys:
-          ${{ runner.os }}-projectname-
+        cache: 'npm'
 
     - name: Install node_modules
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        npm install -g yarn
-        yarn install
+      run: npm ci
 
     - name: Lint
-      run: |
-        yarn check-all
+      run: npm run check-all
 
     - name: Test
-      run: |
-        yarn test
+      run: npm test
