@@ -10,5 +10,5 @@ export function isChangeEvent<T extends HTMLInputElement>(x: any): x is ChangeEv
 
 // biome-ignore lint/suspicious/noExplicitAny: "unsafe" type guard
 export function isThennable<T>(x: any): x is Promise<T> {
-  return typeof x.then === 'function';
+  return x != null && typeof x.then === 'function';
 }

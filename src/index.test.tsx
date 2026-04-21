@@ -2,8 +2,8 @@ import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import {act} from 'react';
-import {expect, test} from 'vitest';
+import {act, useState} from 'react';
+import {expect, test, vi} from 'vitest';
 
 import * as zod from 'zod';
 
@@ -247,4 +247,290 @@ test('User is able to push server side validation', async () => {
   expect(state2.isDirty).toBeTruthy();
   expect(state2.isValid).toBeFalsy();
   expect(state2.errors.age).toEqual('Invalid input');
+});
+
+// ============================================================
+// Bug detection tests
+// ============================================================
+
+test('BUG: pushFormErrors should set isValid to true when no actual errors exist', async () => {
+  const TestFormHook = createTestHook();
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  // Set valid values for all fields
+  TestFormHook.actions.handleBulkChange(() => ({
+    name: 'test',
+    description: 'desc',
+    age: '25',
+    marked: true,
+  }));
+
+  // Confirm form is valid before pushFormErrors
+  const stateBefore = TestFormHook.api.getState();
+  expect(stateBefore.isValid).toBe(true);
+
+  // Push empty errors (no actual errors)
+  TestFormHook.actions.pushFormErrors(() => ({}));
+
+  // isValid should still be true since there are no real errors
+  const stateAfter = TestFormHook.api.getState();
+  expect(stateAfter.isValid).toBe(true);
+});
+
+test('BUG: withValidation should keep all field keys in errors object (not drop missing ones)', async () => {
+  const TestFormHook = createTestHook();
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  // Type invalid age to trigger a validation error on age only
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  await userEvent.type(ageInput, 'invalid');
+
+  const state = TestFormHook.api.getState();
+
+  // age should have an error
+  expect(state.errors.age).toBeTruthy();
+
+  // Other fields should have null (not undefined) — they must still exist as keys
+  expect(state.errors.name).toBeNull();
+  expect(state.errors.description).toBeNull();
+  expect(state.errors.marked).toBeNull();
+
+  // All original keys should be present
+  const errorKeys = Object.keys(state.errors).sort();
+  const expectedKeys = ['age', 'description', 'marked', 'name'].sort();
+  expect(errorKeys).toEqual(expectedKeys);
+});
+
+// ============================================================
+// Coverage tests for otherwise-untested public APIs
+// ============================================================
+
+test('reset() restores initial values, clears errors, and resets isDirty', () => {
+  const TestFormHook = createTestHook();
+
+  TestFormHook.actions.handleBulkChange(() => ({
+    name: 'changed',
+    description: 'also changed',
+    age: '42',
+    marked: true,
+  }));
+  expect(TestFormHook.api.getState().isDirty).toBe(true);
+
+  TestFormHook.actions.reset();
+
+  const state = TestFormHook.api.getState();
+  expect(state.value).toEqual(initialState);
+  expect(state.isDirty).toBe(false);
+  expect(state.isValid).toBe(false);
+  expect(state.errors.name).toBeNull();
+  expect(state.errors.age).toBeNull();
+});
+
+test('handleBulkChange updates multiple fields and validates once', () => {
+  const TestFormHook = createTestHook();
+
+  TestFormHook.actions.handleBulkChange(() => ({
+    name: 'test',
+    description: 'desc',
+    age: '25',
+    marked: true,
+  }));
+
+  const state = TestFormHook.api.getState();
+  expect(state.value.name).toBe('test');
+  expect(state.value.description).toBe('desc');
+  expect(state.value.age).toBe('25');
+  expect(state.value.marked).toBe(true);
+  expect(state.isDirty).toBe(true);
+  expect(state.isValid).toBe(true);
+  // every field entry should be null when the form is fully valid
+  expect(Object.values(state.errors).every((v) => v === null)).toBe(true);
+});
+
+test('handleChange ignores unknown field names and leaves state unchanged', () => {
+  const TestFormHook = createTestHook();
+  const before = TestFormHook.api.getState();
+
+  // Cast to bypass the compile-time name constraint — simulating a runtime
+  // slip such as a dynamic field name coming from outside the type system.
+  (TestFormHook.actions.handleChange as (name: string, value: unknown) => void)('doesNotExist', 'anything');
+
+  const after = TestFormHook.api.getState();
+  expect(after).toBe(before);
+});
+
+test('useInitialize seeds the form on mount', () => {
+  const TestFormHook = createTestHook();
+
+  function App() {
+    TestFormHook.useInitialize({name: 'onMount', age: '10'});
+    return <div data-testid="mounted" />;
+  }
+
+  render(<App />);
+
+  const state = TestFormHook.api.getState();
+  expect(state.value.name).toBe('onMount');
+  expect(state.value.age).toBe('10');
+  // unspecified fields keep their original initial
+  expect(state.value.description).toBe('');
+  expect(state.value.marked).toBe(false);
+});
+
+test('useInitialize does not re-run on subsequent renders', async () => {
+  const TestFormHook = createTestHook();
+
+  function App() {
+    const [tick, setTick] = useState(0);
+    // argument is intentionally a fresh object each render to confirm the
+    // effect still does not re-fire (deps are [])
+    TestFormHook.useInitialize({name: 'onMount'});
+    return (
+      <button type="button" data-testid="rerender" onClick={() => setTick(tick + 1)}>
+        {tick}
+      </button>
+    );
+  }
+
+  render(<App />);
+  expect(TestFormHook.api.getState().value.name).toBe('onMount');
+
+  // mutate state after the initialize effect has already fired
+  TestFormHook.actions.handleChange('name', 'changedByUser');
+  expect(TestFormHook.api.getState().value.name).toBe('changedByUser');
+
+  // force a re-render; initialize must not clobber the user's input
+  await userEvent.click(screen.getByTestId('rerender'));
+  expect(TestFormHook.api.getState().value.name).toBe('changedByUser');
+});
+
+test('initializeForm merges partial values into the existing state', () => {
+  const TestFormHook = createTestHook();
+
+  // Seed one field first so we can verify a later partial call preserves it.
+  TestFormHook.actions.initializeForm({description: 'preserved'});
+  TestFormHook.actions.initializeForm({name: 'Alice', age: '30'});
+
+  const state = TestFormHook.api.getState();
+  expect(state.value.name).toBe('Alice');
+  expect(state.value.age).toBe('30');
+  expect(state.value.description).toBe('preserved');
+  expect(state.value.marked).toBe(false);
+});
+
+test('handleSubmit supports a synchronous handler on the success path', async () => {
+  const TestFormHook = createTestHook();
+
+  const handler = vi.fn((_e: unknown) => (_result: unknown) => 'sync-success');
+  const submit = TestFormHook.handleSubmit(handler);
+
+  TestFormHook.actions.handleBulkChange(() => ({
+    name: 'a',
+    description: 'b',
+    age: '5',
+    marked: true,
+  }));
+
+  const result = await submit({} as never);
+  expect(result).toBe('sync-success');
+  expect(handler).toHaveBeenCalledTimes(1);
+});
+
+test('handleSubmit supports a synchronous handler on the failure path', async () => {
+  const TestFormHook = createTestHook();
+
+  const innerCallback = vi.fn((result: {success: boolean}) => {
+    expect(result.success).toBe(false);
+    return 'sync-failure';
+  });
+  const outerCallback = vi.fn((_e: unknown) => innerCallback);
+  const submit = TestFormHook.handleSubmit(outerCallback);
+
+  // initial state has age='' which fails the zod refine → schema fails
+  const result = await submit({} as never);
+  expect(result).toBe('sync-failure');
+  expect(outerCallback).toHaveBeenCalledTimes(1);
+  expect(innerCallback).toHaveBeenCalledTimes(1);
+
+  // failure issues should also be pushed into form errors
+  const state = TestFormHook.api.getState();
+  expect(state.isValid).toBe(false);
+  expect(state.errors.age).toBeTruthy();
+});
+
+test('validation errors map to their respective fields when multiple fail at once', () => {
+  const TestFormHook = createTestHook();
+
+  TestFormHook.actions.handleBulkChange(() => ({
+    // `name` and `marked` both violate the schema; `description` stays valid
+    name: 123 as unknown as string,
+    description: 'ok',
+    age: 'notANumber',
+    marked: 'notBool' as unknown as boolean,
+  }));
+
+  const state = TestFormHook.api.getState();
+  expect(state.isValid).toBe(false);
+  expect(state.errors.name).toBeTruthy();
+  expect(state.errors.marked).toBeTruthy();
+  expect(state.errors.age).toBeTruthy();
+  expect(state.errors.description).toBeNull();
+});
+
+test('BUG: isThennable should not crash when handler returns null or undefined', async () => {
+  const TestFormHook = createTestHook();
+
+  // Handler returns undefined (synchronous, no return value)
+  const handleSubmitTester = TestFormHook.handleSubmit((_e) => (_result) => {
+    // intentionally return undefined
+    return undefined;
+  });
+
+  const Top = () => {
+    return (
+      <div>
+        <AgeInputComponent controller={TestFormHook.controller} />
+        <button
+          type="button"
+          data-testid="submit-button"
+          onClick={async (e) => {
+            // This should not throw even when handler returns undefined
+            await handleSubmitTester(e);
+          }}
+        />
+      </div>
+    );
+  };
+
+  render(<Top />);
+
+  // Type invalid value to trigger the error path where isThennable is called
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  await userEvent.type(ageInput, 'not-a-number');
+
+  const submitButton = screen.getByTestId('submit-button');
+  // This should not throw TypeError: Cannot read properties of undefined (reading 'then')
+  await userEvent.click(submitButton);
+
+  // If we reach here, isThennable didn't crash
+  const state = TestFormHook.api.getState();
+  expect(state.errors.age).toBeTruthy();
 });
