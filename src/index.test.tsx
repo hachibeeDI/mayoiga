@@ -5,37 +5,11 @@ import userEvent from '@testing-library/user-event';
 import {act, useState} from 'react';
 import {expect, test, vi} from 'vitest';
 
-import * as zod from 'zod';
-
-import {createFormHook, useFormSlice} from './index';
+import {useFormSlice} from './index';
+import {createTestHook, initialState} from './test-fixture';
 
 import type {Controller} from './index';
-
-const testSchema = zod.object({
-  name: zod.string(),
-  description: zod.string(),
-  age: zod
-    .string()
-    .transform((val) => Number(val))
-    .refine((val) => (Number.isNaN(val) ? 0 : val)),
-  marked: zod.boolean(),
-});
-
-// every fields are optional for test
-type FormStateBeforeValidation = {
-  name: string;
-  description: string;
-  age: string;
-  marked: boolean;
-};
-
-const initialState = {
-  name: '',
-  description: '',
-  age: '',
-  marked: false,
-};
-const createTestHook = () => createFormHook(initialState as FormStateBeforeValidation, testSchema);
+import type {FormStateBeforeValidation} from './test-fixture';
 
 const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidation>}) => {
   const {controller} = props;
@@ -55,7 +29,37 @@ const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidat
   );
 };
 
-// afterEach(cleanup);
+type SubmitResult = {success: boolean; data?: unknown; error?: unknown};
+
+/**
+ * Wire `handleSubmit` to a DOM button so the submit flow is exercised through
+ * a real click. Both callback layers are spies, so the test body can assert
+ * on what they received instead of asserting inside the callbacks (which
+ * would pass silently if the callbacks were never invoked).
+ */
+function renderSubmitForm<R>(hook: ReturnType<typeof createTestHook>, inner: (result: SubmitResult) => R) {
+  const innerSpy = vi.fn(inner);
+  const outerSpy = vi.fn((_e: unknown) => innerSpy);
+  const returnedValues: unknown[] = [];
+  const submit = hook.handleSubmit(outerSpy);
+
+  render(
+    <div>
+      <AgeInputComponent controller={hook.controller} />
+      <button
+        type="button"
+        data-testid="submit-button"
+        onClick={(e) => {
+          void submit(e).then((v) => {
+            returnedValues.push(v);
+          });
+        }}
+      />
+    </div>,
+  );
+
+  return {innerSpy, outerSpy, returnedValues};
+}
 
 test('useSelector can select the fields', async () => {
   const TestFormHook = createTestHook();
@@ -71,16 +75,12 @@ test('useSelector can select the fields', async () => {
   render(<Top />);
 
   const INPUT_AGE = '4';
-
-  // fireEvent.change(screen.getByTestId('age-input') , {target: {value: INPUT_AGE}})
-  // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
-  // TestFormHook.actions.handleBulkChange(prev => ({...prev, name: 'test', description: 'desc'}));
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  expect(ageInput.value).toBe(INPUT_AGE);
+  expect(TestFormHook.api.getState().value.age).toBe(INPUT_AGE);
+  expect(screen.getByTestId('age-error').textContent).toBe('');
 });
 
 test('zod parse value before submit', async () => {
@@ -89,51 +89,26 @@ test('zod parse value before submit', async () => {
   const INPUT_AGE = '9';
   const PARSED_RESULT = Number(INPUT_AGE);
 
-  const handleSubmitTester = TestFormHook.handleSubmit((_e) => (result) => {
-    if (result.success) {
-      expect(result.data.age).toBe(PARSED_RESULT);
-    } else {
-      expect('should not called').toBe(result.error);
-    }
-    return Promise.resolve('returns value');
-  });
-
-  const Top = () => {
-    return (
-      <div>
-        <AgeInputComponent controller={TestFormHook} />
-        <button
-          type="button"
-          data-testid="submit-button"
-          onClick={async (e) => {
-            const returnedValue = await handleSubmitTester(e);
-            expect(returnedValue).toBe('returns value');
-          }}
-        />
-      </div>
-    );
-  };
-
-  render(<Top />);
+  const {innerSpy, outerSpy, returnedValues} = renderSubmitForm(TestFormHook, () => Promise.resolve('returns value'));
 
   const ageInput: HTMLInputElement = screen.getByTestId('age-input');
   await userEvent.type(ageInput, INPUT_AGE);
+  expect(ageInput.value).toBe(INPUT_AGE);
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
+  await userEvent.click(screen.getByTestId('submit-button'));
+  await vi.waitFor(() => expect(returnedValues).toEqual(['returns value']));
+
+  expect(outerSpy).toHaveBeenCalledTimes(1);
+  expect(innerSpy).toHaveBeenCalledTimes(1);
+  expect(innerSpy.mock.calls[0]?.[0]).toMatchObject({
+    success: true,
+    error: undefined,
+    data: {age: PARSED_RESULT},
   });
 
-  const submitButton = screen.getByTestId('submit-button');
-  await userEvent.click(submitButton);
-
-  await act(() => {
-    console.log('waiting');
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBeNull();
-    });
-  });
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBeNull();
 });
 
 test('able to handle parse error on submit', async () => {
@@ -146,52 +121,23 @@ test('able to handle parse error on submit', async () => {
     path: ['age'],
   };
 
-  const handleSubmitTester = TestFormHook.handleSubmit((_e) => (result) => {
-    if (result.success) {
-      expect('should not succeed').toBe(false);
-    } else {
-      expect(result.success).toBe(false);
-      expect(result.error).toStrictEqual([EXPECTED_ISSUE]);
-    }
-    return Promise.resolve('returns value');
-  });
-
-  const Top = () => {
-    return (
-      <div>
-        <AgeInputComponent controller={TestFormHook} />
-        <button
-          type="button"
-          data-testid="submit-button"
-          onClick={async (e) => {
-            const returnedValue = await handleSubmitTester(e);
-            expect(returnedValue).toBe('returns value');
-          }}
-        />
-      </div>
-    );
-  };
-
-  render(<Top />);
+  const {innerSpy, returnedValues} = renderSubmitForm(TestFormHook, () => Promise.resolve('returns value'));
 
   const ageInput: HTMLInputElement = screen.getByTestId('age-input');
   await userEvent.type(ageInput, INPUT_AGE);
+  expect(ageInput.value).toBe(INPUT_AGE);
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-  });
+  await userEvent.click(screen.getByTestId('submit-button'));
+  await vi.waitFor(() => expect(returnedValues).toEqual(['returns value']));
 
-  const submitButton = screen.getByTestId('submit-button');
-  await userEvent.click(submitButton);
+  expect(innerSpy).toHaveBeenCalledTimes(1);
+  const received = innerSpy.mock.calls[0]?.[0];
+  expect(received?.success).toBe(false);
+  expect(received?.error).toStrictEqual([EXPECTED_ISSUE]);
 
-  await act(() => {
-    console.log('waiting');
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBe(EXPECTED_ISSUE.message);
-    });
-  });
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBe(EXPECTED_ISSUE.message);
 });
 
 test('User is able to re-initialize the form state', async () => {
@@ -249,11 +195,7 @@ test('User is able to push server side validation', async () => {
   expect(state2.errors.age).toEqual('Invalid input');
 });
 
-// ============================================================
-// Bug detection tests
-// ============================================================
-
-test('BUG: pushFormErrors should set isValid to true when no actual errors exist', async () => {
+test('pushFormErrors keeps isValid true when the pushed error map is empty', async () => {
   const TestFormHook = createTestHook();
 
   const Top = () => {
@@ -286,7 +228,7 @@ test('BUG: pushFormErrors should set isValid to true when no actual errors exist
   expect(stateAfter.isValid).toBe(true);
 });
 
-test('BUG: withValidation should keep all field keys in errors object (not drop missing ones)', async () => {
+test('validation keeps every field key in errors, with null for fields that passed', async () => {
   const TestFormHook = createTestHook();
 
   const Top = () => {
@@ -318,10 +260,6 @@ test('BUG: withValidation should keep all field keys in errors object (not drop 
   const expectedKeys = ['age', 'description', 'marked', 'name'].sort();
   expect(errorKeys).toEqual(expectedKeys);
 });
-
-// ============================================================
-// Coverage tests for otherwise-untested public APIs
-// ============================================================
 
 test('reset() restores initial values, clears errors, and resets isDirty', () => {
   const TestFormHook = createTestHook();
@@ -439,8 +377,9 @@ test('initializeForm merges partial values into the existing state', () => {
 test('handleSubmit supports a synchronous handler on the success path', async () => {
   const TestFormHook = createTestHook();
 
-  const handler = vi.fn((_e: unknown) => (_result: unknown) => 'sync-success');
-  const submit = TestFormHook.handleSubmit(handler);
+  const inner = vi.fn((_result: SubmitResult) => 'sync-success');
+  const outer = vi.fn((_e: unknown) => inner);
+  const submit = TestFormHook.handleSubmit(outer);
 
   TestFormHook.actions.handleBulkChange(() => ({
     name: 'a',
@@ -451,24 +390,28 @@ test('handleSubmit supports a synchronous handler on the success path', async ()
 
   const result = await submit({} as never);
   expect(result).toBe('sync-success');
-  expect(handler).toHaveBeenCalledTimes(1);
+  expect(outer).toHaveBeenCalledTimes(1);
+  expect(inner).toHaveBeenCalledTimes(1);
+  expect(inner.mock.calls[0]?.[0]).toMatchObject({
+    success: true,
+    error: undefined,
+    data: {name: 'a', description: 'b', age: 5, marked: true},
+  });
 });
 
 test('handleSubmit supports a synchronous handler on the failure path', async () => {
   const TestFormHook = createTestHook();
 
-  const innerCallback = vi.fn((result: {success: boolean}) => {
-    expect(result.success).toBe(false);
-    return 'sync-failure';
-  });
-  const outerCallback = vi.fn((_e: unknown) => innerCallback);
-  const submit = TestFormHook.handleSubmit(outerCallback);
+  const inner = vi.fn((_result: SubmitResult) => 'sync-failure');
+  const outer = vi.fn((_e: unknown) => inner);
+  const submit = TestFormHook.handleSubmit(outer);
 
-  // initial state has age='' which fails the zod refine → schema fails
+  // initial state has age='' which fails `min(1)` → schema fails
   const result = await submit({} as never);
   expect(result).toBe('sync-failure');
-  expect(outerCallback).toHaveBeenCalledTimes(1);
-  expect(innerCallback).toHaveBeenCalledTimes(1);
+  expect(outer).toHaveBeenCalledTimes(1);
+  expect(inner).toHaveBeenCalledTimes(1);
+  expect(inner.mock.calls[0]?.[0]?.success).toBe(false);
 
   // failure issues should also be pushed into form errors
   const state = TestFormHook.api.getState();
@@ -495,42 +438,83 @@ test('validation errors map to their respective fields when multiple fail at onc
   expect(state.errors.description).toBeNull();
 });
 
-test('BUG: isThennable should not crash when handler returns null or undefined', async () => {
+test('handleSubmit resolves when the handler returns undefined on the failure path', async () => {
   const TestFormHook = createTestHook();
 
   // Handler returns undefined (synchronous, no return value)
-  const handleSubmitTester = TestFormHook.handleSubmit((_e) => (_result) => {
-    // intentionally return undefined
-    return undefined;
-  });
-
-  const Top = () => {
-    return (
-      <div>
-        <AgeInputComponent controller={TestFormHook.controller} />
-        <button
-          type="button"
-          data-testid="submit-button"
-          onClick={async (e) => {
-            // This should not throw even when handler returns undefined
-            await handleSubmitTester(e);
-          }}
-        />
-      </div>
-    );
-  };
-
-  render(<Top />);
+  const {innerSpy, returnedValues} = renderSubmitForm(TestFormHook, () => undefined);
 
   // Type invalid value to trigger the error path where isThennable is called
   const ageInput: HTMLInputElement = screen.getByTestId('age-input');
   await userEvent.type(ageInput, 'not-a-number');
 
-  const submitButton = screen.getByTestId('submit-button');
-  // This should not throw TypeError: Cannot read properties of undefined (reading 'then')
-  await userEvent.click(submitButton);
+  // Must resolve (not reject with TypeError: Cannot read properties of undefined (reading 'then'))
+  await userEvent.click(screen.getByTestId('submit-button'));
+  await vi.waitFor(() => expect(returnedValues).toEqual([undefined]));
 
-  // If we reach here, isThennable didn't crash
+  expect(innerSpy).toHaveBeenCalledTimes(1);
+  expect(TestFormHook.api.getState().errors.age).toBeTruthy();
+});
+
+test('api.actions.reduceFormErrors rewrites the error map through a reducer', () => {
+  const TestFormHook = createTestHook();
+
+  TestFormHook.api.actions.reduceFormErrors((prev) => ({...prev, name: 'reduced'}));
+
   const state = TestFormHook.api.getState();
-  expect(state.errors.age).toBeTruthy();
+  expect(state.errors.name).toBe('reduced');
+  expect(state.errors.age).toBeNull();
+});
+
+test('api.actions.reduceFormState derives the next value from the previous one and validates it', () => {
+  const TestFormHook = createTestHook();
+  TestFormHook.actions.handleBulkChange(() => ({name: 'n', description: 'd', age: '1', marked: true}));
+
+  TestFormHook.api.actions.reduceFormState((prev) => ({...prev, age: `${prev.age}0`}));
+  const valid = TestFormHook.api.getState();
+  expect(valid.value.age).toBe('10');
+  expect(valid.isValid).toBe(true);
+
+  TestFormHook.api.actions.reduceFormState((prev) => ({...prev, age: 'x'}));
+  const invalid = TestFormHook.api.getState();
+  expect(invalid.isValid).toBe(false);
+  expect(invalid.errors.age).toBe('Invalid input');
+});
+
+test('useSelector honours a custom isEqual and skips the re-render when it reports equality', () => {
+  const TestFormHook = createTestHook();
+  const renders = vi.fn();
+
+  function Age() {
+    const age = TestFormHook.useSelector(
+      (s) => s.value.age,
+      () => true,
+    );
+    renders();
+    return <span data-testid="age">{age}</span>;
+  }
+
+  render(<Age />);
+  expect(renders).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    TestFormHook.actions.handleChange('age', '7');
+  });
+
+  expect(TestFormHook.api.getState().value.age).toBe('7');
+  expect(renders).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('age').textContent).toBe('');
+});
+
+test('api.subscribe is notified with the new state on every change', () => {
+  const TestFormHook = createTestHook();
+  const listener = vi.fn();
+  TestFormHook.api.subscribe(listener);
+
+  TestFormHook.actions.handleChange('name', 'x');
+  TestFormHook.actions.pushFormErrors(() => ({name: 'err'}));
+
+  expect(listener).toHaveBeenCalledTimes(2);
+  expect(listener.mock.calls[0]?.[0]?.value.name).toBe('x');
+  expect(listener.mock.calls[1]?.[0]?.errors.name).toBe('err');
 });

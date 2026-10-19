@@ -1,45 +1,15 @@
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 
 import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react';
+import {act, useState} from 'react';
 import * as zod from 'zod';
 
 import {Field, Slicer} from './component';
 import {createFormHook} from './index';
+import {createTestHook} from './test-fixture';
 import type {Controller} from './index';
-
-const testSchema = zod.object({
-  name: zod.string(),
-  description: zod.string(),
-  age: zod
-    .string()
-    .transform((val) => Number(val))
-    .refine((val) => (Number.isNaN(val) ? 0 : val)),
-  marked: zod.boolean(),
-});
-
-// every fields are optional for test
-type FormStateBeforeValidation = {
-  name: string;
-  description: string;
-  age: string;
-  marked: boolean;
-};
-
-const createTestHook = () =>
-  createFormHook(
-    {
-      name: '',
-      description: '',
-      age: '',
-      marked: false,
-    } as FormStateBeforeValidation,
-    testSchema,
-  );
-
-// afterEach(cleanup);
 
 test('Field component works fine in basic usage.', async () => {
   const TestFormHook = createTestHook();
@@ -57,18 +27,13 @@ test('Field component works fine in basic usage.', async () => {
   render(<Top />);
 
   const INPUT_AGE = '42';
-
-  // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBeNull();
-    });
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  expect(ageInput.value).toBe(INPUT_AGE);
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBeNull();
 });
 
 test('Slice component works fine in basic usage.', async () => {
@@ -89,18 +54,13 @@ test('Slice component works fine in basic usage.', async () => {
   render(<Top />);
 
   const INPUT_AGE = '42';
-
-  // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBeNull();
-    });
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  expect(ageInput.value).toBe(INPUT_AGE);
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBeNull();
 });
 
 test('A user able to create a reusable component', async () => {
@@ -148,19 +108,14 @@ test('A user able to create a reusable component', async () => {
   );
 
   const INPUT_AGE = '42';
-
-  // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
   await userEvent.click(screen.getByRole('button'));
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBe('yes!!!');
-    });
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  expect(ageInput.value).toBe(INPUT_AGE);
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBe('yes!!!');
 });
 
 test('Field onChange throws when called with neither a string name nor a ChangeEvent', () => {
@@ -226,24 +181,128 @@ test('`deps` field could destruct memoization', async () => {
   render(<App />);
 
   await userEvent.type(screen.getByTestId('ageInput'), '16');
-
-  await act(() => {
-    expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent).toBe('go home');
-    // expect(await screen.findByText('You can buy this content')).toBeDefined();
-  });
+  expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent).toBe('go home');
 
   await userEvent.clear(screen.getByTestId('minAgeInput'));
   await userEvent.type(screen.getByTestId('minAgeInput'), '10');
 
-  await act(() => {
-    expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent, 'Slicer should re-execute renderProps if `deps` are changed').toBe(
-      'You can buy this content',
+  expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent, 'Slicer should re-execute renderProps if `deps` are changed').toBe(
+    'You can buy this content',
+  );
+  expect(
+    screen.getByTestId(DATA_ID_NOT_RERENDER_NO_DEPS).textContent,
+    'Same logic but would not refresh because external dependencies are not applied',
+  ).toBe('go home');
+});
+
+test('Field onChange accepts an explicit (name, value) pair', () => {
+  const TestFormHook = createTestHook();
+  let captured: ((name: 'age', value: string) => void) | undefined;
+
+  render(
+    <Field controller={TestFormHook.controller} name="age">
+      {(tool) => {
+        captured = tool.onChange;
+        return <input data-testid="age-input" {...tool} />;
+      }}
+    </Field>,
+  );
+
+  act(() => {
+    captured?.('age', '7');
+  });
+
+  expect(TestFormHook.api.getState().value.age).toBe('7');
+  expect((screen.getByTestId('age-input') as HTMLInputElement).value).toBe('7');
+});
+
+test('Field re-runs its render prop only when its own value/error changes, or when deps change', async () => {
+  const TestFormHook = createTestHook();
+  // start from a valid state so unrelated edits do not touch this field's error
+  TestFormHook.actions.handleBulkChange(() => ({name: 'n', description: 'd', age: '1', marked: true}));
+
+  const memoized = vi.fn();
+  const withDeps = vi.fn();
+
+  function App() {
+    const [tick, setTick] = useState(0);
+    return (
+      <div>
+        <button type="button" data-testid="rerender" onClick={() => setTick(tick + 1)} />
+        <Field controller={TestFormHook.controller} name="age">
+          {(tool) => {
+            memoized();
+            return <input data-testid="age-input" {...tool} />;
+          }}
+        </Field>
+        <Field controller={TestFormHook.controller} name="age" deps={[tick]}>
+          {(_tool, value) => {
+            withDeps();
+            return <span>{value}</span>;
+          }}
+        </Field>
+      </div>
     );
+  }
+
+  render(<App />);
+  expect(memoized).toHaveBeenCalledTimes(1);
+  expect(withDeps).toHaveBeenCalledTimes(1);
+
+  // parent re-render: only the Field with deps re-runs
+  await userEvent.click(screen.getByTestId('rerender'));
+  expect(memoized).toHaveBeenCalledTimes(1);
+  expect(withDeps).toHaveBeenCalledTimes(2);
+
+  // unrelated field change: neither re-runs
+  act(() => {
+    TestFormHook.actions.handleChange('name', 'other');
   });
-  await act(() => {
-    expect(
-      screen.getByTestId(DATA_ID_NOT_RERENDER_NO_DEPS).textContent,
-      'Same logic but would not refresh because external dependencies are not applied',
-    ).toBe('go home');
+  expect(memoized).toHaveBeenCalledTimes(1);
+  expect(withDeps).toHaveBeenCalledTimes(2);
+
+  // own field change: both re-run
+  act(() => {
+    TestFormHook.actions.handleChange('age', '2');
   });
+  expect(memoized).toHaveBeenCalledTimes(2);
+  expect(withDeps).toHaveBeenCalledTimes(3);
+});
+
+test('Slicer re-runs its render prop only when the selected tuple changes', async () => {
+  const TestFormHook = createTestHook();
+  TestFormHook.actions.handleBulkChange(() => ({name: 'n', description: 'd', age: '1', marked: true}));
+
+  const renderProp = vi.fn();
+
+  function App() {
+    const [tick, setTick] = useState(0);
+    return (
+      <div>
+        <button type="button" data-testid="rerender" onClick={() => setTick(tick + 1)} />
+        <Slicer controller={TestFormHook.controller} selector={(s) => [s.value.age, s.isValid] as const}>
+          {(_tool, age: string, isValid: boolean) => {
+            renderProp();
+            return <span>{`${age}:${isValid}`}</span>;
+          }}
+        </Slicer>
+      </div>
+    );
+  }
+
+  render(<App />);
+  expect(renderProp).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByTestId('rerender'));
+  expect(renderProp).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    TestFormHook.actions.handleChange('description', 'changed');
+  });
+  expect(renderProp).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    TestFormHook.actions.handleChange('age', '2');
+  });
+  expect(renderProp).toHaveBeenCalledTimes(2);
 });
