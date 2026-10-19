@@ -7,5 +7,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./setup/vite-global-setup.js'],
     exclude: ['**/node_modules/**', '**/dist/**'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test-fixture.ts'],
+      reporter: ['text', 'html'],
+    },
   },
-})
+});
