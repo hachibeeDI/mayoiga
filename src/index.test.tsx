@@ -5,37 +5,11 @@ import userEvent from '@testing-library/user-event';
 import {useState} from 'react';
 import {expect, test, vi} from 'vitest';
 
-import * as zod from 'zod';
-
-import {createFormHook, useFormSlice} from './index';
+import {useFormSlice} from './index';
+import {createTestHook, initialState} from './test-fixture';
 
 import type {Controller} from './index';
-
-const testSchema = zod.object({
-  name: zod.string(),
-  description: zod.string(),
-  age: zod
-    .string()
-    .transform((val) => Number(val))
-    .refine((val) => (Number.isNaN(val) ? 0 : val)),
-  marked: zod.boolean(),
-});
-
-// every fields are optional for test
-type FormStateBeforeValidation = {
-  name: string;
-  description: string;
-  age: string;
-  marked: boolean;
-};
-
-const initialState = {
-  name: '',
-  description: '',
-  age: '',
-  marked: false,
-};
-const createTestHook = () => createFormHook(initialState as FormStateBeforeValidation, testSchema);
+import type {FormStateBeforeValidation} from './test-fixture';
 
 const AgeInputComponent = (props: {controller: Controller<FormStateBeforeValidation>}) => {
   const {controller} = props;
@@ -221,11 +195,7 @@ test('User is able to push server side validation', async () => {
   expect(state2.errors.age).toEqual('Invalid input');
 });
 
-// ============================================================
-// Bug detection tests
-// ============================================================
-
-test('BUG: pushFormErrors should set isValid to true when no actual errors exist', async () => {
+test('pushFormErrors keeps isValid true when the pushed error map is empty', async () => {
   const TestFormHook = createTestHook();
 
   const Top = () => {
@@ -258,7 +228,7 @@ test('BUG: pushFormErrors should set isValid to true when no actual errors exist
   expect(stateAfter.isValid).toBe(true);
 });
 
-test('BUG: withValidation should keep all field keys in errors object (not drop missing ones)', async () => {
+test('validation keeps every field key in errors, with null for fields that passed', async () => {
   const TestFormHook = createTestHook();
 
   const Top = () => {
@@ -290,10 +260,6 @@ test('BUG: withValidation should keep all field keys in errors object (not drop 
   const expectedKeys = ['age', 'description', 'marked', 'name'].sort();
   expect(errorKeys).toEqual(expectedKeys);
 });
-
-// ============================================================
-// Coverage tests for otherwise-untested public APIs
-// ============================================================
 
 test('reset() restores initial values, clears errors, and resets isDirty', () => {
   const TestFormHook = createTestHook();
@@ -440,7 +406,7 @@ test('handleSubmit supports a synchronous handler on the failure path', async ()
   const outer = vi.fn((_e: unknown) => inner);
   const submit = TestFormHook.handleSubmit(outer);
 
-  // initial state has age='' which fails the zod refine → schema fails
+  // initial state has age='' which fails `min(1)` → schema fails
   const result = await submit({} as never);
   expect(result).toBe('sync-failure');
   expect(outer).toHaveBeenCalledTimes(1);
@@ -472,7 +438,7 @@ test('validation errors map to their respective fields when multiple fail at onc
   expect(state.errors.description).toBeNull();
 });
 
-test('BUG: isThennable should not crash when handler returns null or undefined', async () => {
+test('handleSubmit resolves when the handler returns undefined on the failure path', async () => {
   const TestFormHook = createTestHook();
 
   // Handler returns undefined (synchronous, no return value)

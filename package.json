@@ -16,7 +16,7 @@
     "docs": "typedoc src/index.ts src/component.tsx --out docs",
     "test": "vitest run",
     "prebuild": "pnpm run clean",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "check:type": "tsc --noEmit",
     "check:lint": "biome lint src/",
     "check:style": "biome format src/",

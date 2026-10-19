@@ -7,36 +7,8 @@ import * as zod from 'zod';
 
 import {Field, Slicer} from './component';
 import {createFormHook} from './index';
+import {createTestHook} from './test-fixture';
 import type {Controller} from './index';
-
-const testSchema = zod.object({
-  name: zod.string(),
-  description: zod.string(),
-  age: zod
-    .string()
-    .transform((val) => Number(val))
-    .refine((val) => (Number.isNaN(val) ? 0 : val)),
-  marked: zod.boolean(),
-});
-
-// every fields are optional for test
-type FormStateBeforeValidation = {
-  name: string;
-  description: string;
-  age: string;
-  marked: boolean;
-};
-
-const createTestHook = () =>
-  createFormHook(
-    {
-      name: '',
-      description: '',
-      age: '',
-      marked: false,
-    } as FormStateBeforeValidation,
-    testSchema,
-  );
 
 test('Field component works fine in basic usage.', async () => {
   const TestFormHook = createTestHook();
