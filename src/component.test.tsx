@@ -3,7 +3,6 @@ import {expect, test} from 'vitest';
 import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {act} from 'react';
 import * as zod from 'zod';
 
 import {Field, Slicer} from './component';
@@ -39,8 +38,6 @@ const createTestHook = () =>
     testSchema,
   );
 
-// afterEach(cleanup);
-
 test('Field component works fine in basic usage.', async () => {
   const TestFormHook = createTestHook();
 
@@ -57,18 +54,13 @@ test('Field component works fine in basic usage.', async () => {
   render(<Top />);
 
   const INPUT_AGE = '42';
-
-  // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBeNull();
-    });
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  expect(ageInput.value).toBe(INPUT_AGE);
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBeNull();
 });
 
 test('Slice component works fine in basic usage.', async () => {
@@ -89,18 +81,13 @@ test('Slice component works fine in basic usage.', async () => {
   render(<Top />);
 
   const INPUT_AGE = '42';
-
-  // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBeNull();
-    });
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  expect(ageInput.value).toBe(INPUT_AGE);
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBeNull();
 });
 
 test('A user able to create a reusable component', async () => {
@@ -148,19 +135,14 @@ test('A user able to create a reusable component', async () => {
   );
 
   const INPUT_AGE = '42';
-
-  // calling `userEvent` in here will cause race condition...
   await userEvent.type(screen.getByTestId('age-input'), INPUT_AGE);
   await userEvent.click(screen.getByRole('button'));
 
-  await act(() => {
-    const ageInput: HTMLInputElement = screen.getByTestId('age-input');
-    expect(ageInput.value).toBe(INPUT_AGE);
-    TestFormHook.api.actions.peek((s) => {
-      expect(s.value.age).toBe(INPUT_AGE);
-      expect(s.errors.age).toBe('yes!!!');
-    });
-  });
+  const ageInput: HTMLInputElement = screen.getByTestId('age-input');
+  expect(ageInput.value).toBe(INPUT_AGE);
+  const state = TestFormHook.api.getState();
+  expect(state.value.age).toBe(INPUT_AGE);
+  expect(state.errors.age).toBe('yes!!!');
 });
 
 test('Field onChange throws when called with neither a string name nor a ChangeEvent', () => {
@@ -226,24 +208,16 @@ test('`deps` field could destruct memoization', async () => {
   render(<App />);
 
   await userEvent.type(screen.getByTestId('ageInput'), '16');
-
-  await act(() => {
-    expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent).toBe('go home');
-    // expect(await screen.findByText('You can buy this content')).toBeDefined();
-  });
+  expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent).toBe('go home');
 
   await userEvent.clear(screen.getByTestId('minAgeInput'));
   await userEvent.type(screen.getByTestId('minAgeInput'), '10');
 
-  await act(() => {
-    expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent, 'Slicer should re-execute renderProps if `deps` are changed').toBe(
-      'You can buy this content',
-    );
-  });
-  await act(() => {
-    expect(
-      screen.getByTestId(DATA_ID_NOT_RERENDER_NO_DEPS).textContent,
-      'Same logic but would not refresh because external dependencies are not applied',
-    ).toBe('go home');
-  });
+  expect(screen.getByTestId(DATA_ID_RE_RENDER_BY_DEPS).textContent, 'Slicer should re-execute renderProps if `deps` are changed').toBe(
+    'You can buy this content',
+  );
+  expect(
+    screen.getByTestId(DATA_ID_NOT_RERENDER_NO_DEPS).textContent,
+    'Same logic but would not refresh because external dependencies are not applied',
+  ).toBe('go home');
 });
