@@ -1,8 +1,9 @@
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 
 import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {act, useState} from 'react';
 import * as zod from 'zod';
 
 import {Field, Slicer} from './component';
@@ -192,4 +193,116 @@ test('`deps` field could destruct memoization', async () => {
     screen.getByTestId(DATA_ID_NOT_RERENDER_NO_DEPS).textContent,
     'Same logic but would not refresh because external dependencies are not applied',
   ).toBe('go home');
+});
+
+test('Field onChange accepts an explicit (name, value) pair', () => {
+  const TestFormHook = createTestHook();
+  let captured: ((name: 'age', value: string) => void) | undefined;
+
+  render(
+    <Field controller={TestFormHook.controller} name="age">
+      {(tool) => {
+        captured = tool.onChange;
+        return <input data-testid="age-input" {...tool} />;
+      }}
+    </Field>,
+  );
+
+  act(() => {
+    captured?.('age', '7');
+  });
+
+  expect(TestFormHook.api.getState().value.age).toBe('7');
+  expect((screen.getByTestId('age-input') as HTMLInputElement).value).toBe('7');
+});
+
+test('Field re-runs its render prop only when its own value/error changes, or when deps change', async () => {
+  const TestFormHook = createTestHook();
+  // start from a valid state so unrelated edits do not touch this field's error
+  TestFormHook.actions.handleBulkChange(() => ({name: 'n', description: 'd', age: '1', marked: true}));
+
+  const memoized = vi.fn();
+  const withDeps = vi.fn();
+
+  function App() {
+    const [tick, setTick] = useState(0);
+    return (
+      <div>
+        <button type="button" data-testid="rerender" onClick={() => setTick(tick + 1)} />
+        <Field controller={TestFormHook.controller} name="age">
+          {(tool) => {
+            memoized();
+            return <input data-testid="age-input" {...tool} />;
+          }}
+        </Field>
+        <Field controller={TestFormHook.controller} name="age" deps={[tick]}>
+          {(_tool, value) => {
+            withDeps();
+            return <span>{value}</span>;
+          }}
+        </Field>
+      </div>
+    );
+  }
+
+  render(<App />);
+  expect(memoized).toHaveBeenCalledTimes(1);
+  expect(withDeps).toHaveBeenCalledTimes(1);
+
+  // parent re-render: only the Field with deps re-runs
+  await userEvent.click(screen.getByTestId('rerender'));
+  expect(memoized).toHaveBeenCalledTimes(1);
+  expect(withDeps).toHaveBeenCalledTimes(2);
+
+  // unrelated field change: neither re-runs
+  act(() => {
+    TestFormHook.actions.handleChange('name', 'other');
+  });
+  expect(memoized).toHaveBeenCalledTimes(1);
+  expect(withDeps).toHaveBeenCalledTimes(2);
+
+  // own field change: both re-run
+  act(() => {
+    TestFormHook.actions.handleChange('age', '2');
+  });
+  expect(memoized).toHaveBeenCalledTimes(2);
+  expect(withDeps).toHaveBeenCalledTimes(3);
+});
+
+test('Slicer re-runs its render prop only when the selected tuple changes', async () => {
+  const TestFormHook = createTestHook();
+  TestFormHook.actions.handleBulkChange(() => ({name: 'n', description: 'd', age: '1', marked: true}));
+
+  const renderProp = vi.fn();
+
+  function App() {
+    const [tick, setTick] = useState(0);
+    return (
+      <div>
+        <button type="button" data-testid="rerender" onClick={() => setTick(tick + 1)} />
+        <Slicer controller={TestFormHook.controller} selector={(s) => [s.value.age, s.isValid] as const}>
+          {(_tool, age: string, isValid: boolean) => {
+            renderProp();
+            return <span>{`${age}:${isValid}`}</span>;
+          }}
+        </Slicer>
+      </div>
+    );
+  }
+
+  render(<App />);
+  expect(renderProp).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByTestId('rerender'));
+  expect(renderProp).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    TestFormHook.actions.handleChange('description', 'changed');
+  });
+  expect(renderProp).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    TestFormHook.actions.handleChange('age', '2');
+  });
+  expect(renderProp).toHaveBeenCalledTimes(2);
 });

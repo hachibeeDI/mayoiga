@@ -2,7 +2,7 @@ import {screen} from '@testing-library/dom';
 import {render} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import {useState} from 'react';
+import {act, useState} from 'react';
 import {expect, test, vi} from 'vitest';
 
 import {useFormSlice} from './index';
@@ -454,4 +454,67 @@ test('handleSubmit resolves when the handler returns undefined on the failure pa
 
   expect(innerSpy).toHaveBeenCalledTimes(1);
   expect(TestFormHook.api.getState().errors.age).toBeTruthy();
+});
+
+test('api.actions.reduceFormErrors rewrites the error map through a reducer', () => {
+  const TestFormHook = createTestHook();
+
+  TestFormHook.api.actions.reduceFormErrors((prev) => ({...prev, name: 'reduced'}));
+
+  const state = TestFormHook.api.getState();
+  expect(state.errors.name).toBe('reduced');
+  expect(state.errors.age).toBeNull();
+});
+
+test('api.actions.reduceFormState derives the next value from the previous one and validates it', () => {
+  const TestFormHook = createTestHook();
+  TestFormHook.actions.handleBulkChange(() => ({name: 'n', description: 'd', age: '1', marked: true}));
+
+  TestFormHook.api.actions.reduceFormState((prev) => ({...prev, age: `${prev.age}0`}));
+  const valid = TestFormHook.api.getState();
+  expect(valid.value.age).toBe('10');
+  expect(valid.isValid).toBe(true);
+
+  TestFormHook.api.actions.reduceFormState((prev) => ({...prev, age: 'x'}));
+  const invalid = TestFormHook.api.getState();
+  expect(invalid.isValid).toBe(false);
+  expect(invalid.errors.age).toBe('Invalid input');
+});
+
+test('useSelector honours a custom isEqual and skips the re-render when it reports equality', () => {
+  const TestFormHook = createTestHook();
+  const renders = vi.fn();
+
+  function Age() {
+    const age = TestFormHook.useSelector(
+      (s) => s.value.age,
+      () => true,
+    );
+    renders();
+    return <span data-testid="age">{age}</span>;
+  }
+
+  render(<Age />);
+  expect(renders).toHaveBeenCalledTimes(1);
+
+  act(() => {
+    TestFormHook.actions.handleChange('age', '7');
+  });
+
+  expect(TestFormHook.api.getState().value.age).toBe('7');
+  expect(renders).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('age').textContent).toBe('');
+});
+
+test('api.subscribe is notified with the new state on every change', () => {
+  const TestFormHook = createTestHook();
+  const listener = vi.fn();
+  TestFormHook.api.subscribe(listener);
+
+  TestFormHook.actions.handleChange('name', 'x');
+  TestFormHook.actions.pushFormErrors(() => ({name: 'err'}));
+
+  expect(listener).toHaveBeenCalledTimes(2);
+  expect(listener.mock.calls[0]?.[0]?.value.name).toBe('x');
+  expect(listener.mock.calls[1]?.[0]?.errors.name).toBe('err');
 });
