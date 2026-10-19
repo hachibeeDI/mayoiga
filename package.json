@@ -10,18 +10,19 @@
     "/component.d.ts",
     "!*.test.js"
   ],
+  "packageManager": "pnpm@12.11.2",
   "scripts": {
     "clean": "rm -rf dist",
     "test": "vitest run",
-    "prebuild": "npm run clean",
+    "prebuild": "pnpm run clean",
     "build": "tsc",
     "check:type": "tsc --noEmit",
     "check:lint": "biome lint src/",
     "check:style": "biome format src/",
-    "check-all": "npm run check:type && npm run check:style && npm run check:lint && npm run build -- --noEmit && npm run test",
+    "check-all": "pnpm run check:type && pnpm run check:style && pnpm run check:lint && pnpm run test",
     "fix:lint": "biome lint src/ --fix",
-    "fix-all": "npm run check:style -- --write && npm run check:lint -- --fix",
-    "prepublishOnly": "npm run check-all && npm run build"
+    "fix-all": "pnpm run check:style --write && pnpm run check:lint --fix",
+    "prepublishOnly": "pnpm run check-all && pnpm run build"
   },
   "repository": {
     "type": "git",
@@ -46,10 +47,12 @@
   "dependencies": {
     "nozuchi": "^0.0.13"
   },
-  "overrides": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@types/react": "^19.0.12"
+  "pnpm": {
+    "overrides": {
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0",
+      "@types/react": "^19.0.12"
+    }
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
